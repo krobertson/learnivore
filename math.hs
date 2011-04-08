@@ -12,22 +12,52 @@ join _ [] = ""
 join _ (x:[]) = x
 join str (x:xs) = x ++ str ++ (join str xs)
 
---- Exprs, a data type for containing simple binary expressions
+--- Exprs, a data type for containing simple binary expressions (for easy parsing)
 
 data Expr = Var String | Const Double | Uno Unop (Expr) | Duo Duop (Expr) (Expr) | Seq [Expr]
     deriving Show
 data Unop = Neg | Abs deriving Show
-data Duop = Mult | Add | Log deriving Show
+data Duop = Mult | Div | Add | Sub | Log | Pow deriving Show
 
--- Parser for Exprs
+
+exprparser :: Parser Expr
+exprparser = buildExpressionParser table term <?> "expression"
+
+table = [ [Prefix (m_reservedOp "-" >> return (Uno Neg))]
+        , [Infix (m_reservedOp "^" >> return (Duo Pow)) AssocLeft]
+        , [Infix (m_reservedOp "*" >> return (Duo Mult)) AssocLeft]
+        , [Infix (m_reservedOp "*" >> return (Duo Div)) AssocLeft]
+        , [Infix (m_reservedOp "+" >> return (Duo Add)) AssocLeft]
+        , [Infix (m_reservedOp "-" >> return (Duo Sub)) AssocLeft]
+        ]
+        
+term = m_parens exprparser
+       <|> liftM Var m_identifier
+       <|> liftM Const m_float
+       <|> do {
+                char '|'
+              ; x <- exprparser
+              ; char '|'
+              ; return (Uno Abs x)
+              }
+       <|> do {
+                string "log"
+              ; char '<'
+              ; x <- exprparser
+              ; char '>'
+              ; char '('
+              ; y <- m_parens exprparser
+              ; char ')'
+              ; return (Duo Log x y)
+              }
 
 def = emptyDef{ commentStart = "{-"
               , commentEnd = "-}"
               , identStart = letter
               , identLetter = letter
-              , opStart = oneOf "|*-+=:"
-              , opLetter = oneOf "|*-+=:"
-              , reservedOpNames = ["*", "+", "-", "=", ":="]
+              , opStart = oneOf "|*-+=:^/"
+              , opLetter = oneOf "|*-+=:^/"
+              , reservedOpNames = ["*", "+", "-", "^", "/", "=", ":="]
               , reservedNames = ["log"]
               }
 
@@ -39,40 +69,29 @@ TokenParser{ parens = m_parens
            , semiSep1 = m_semiSep1
            , whiteSpace = m_whiteSpace } = makeTokenParser def
 
-exprparser :: Parser Expr
-exprparser = buildExpressionParser table term <?> "expression"
-table = [ [Prefix (m_reservedOp "-" >> return (Uno Neg))]
-        , [Infix (m_reservedOp "*" >> return (Duo Mult)) AssocLeft]
-        , [Infix (m_reservedOp "+" >> return (Duo Add)) AssocLeft]
-        ]
-term = m_parens exprparser
-       <|> liftM Var m_identifier
-       <|> liftM Const m_float
-       <|> do {
-                string "log"
-              ; char '<'
-              ; x <- exprparser
-              ; char '>'
-              ; char '('
-              ; y <- exprparser
-              ; char ')'
-              ; return (Duo Log x y)
-              }
-                     
--- use <|> to add more
+-- loadExpr :: String -> Either ParseError Expr
+-- loadExpr inp = case parse exprparser "" inp of
+--                { Left err -> return err
+--                ; Right ans -> return ans
+--                }
+--                
+-- printExpr :: Either ParseError Expr -> IO ()
+-- printExpr (Left err) = print err
+-- printExpr (Right expr) = print expr
 
-
-printExpr :: String -> IO ()
-printExpr inp = case parse exprparser "" inp of
-             { Left err -> print err
-             ; Right ans -> print ans
-             }
+-- getExpr :: Either ParseError Expr -> Expr
+-- getExpr (Left _) = Const 0.0
+-- getExpr (Right x) = x
+-- 
 
 --- Expressions
 
 data Expression = Sum [Expression]
+                | Subtract [Expression]
                 | Product [Expression]
+                | Divide [Expression]
                 | Logarithm (Expression) (Expression)
+                | Power (Expression) (Expression)
                 | Absolute (Expression)
                 | Negate (Expression)
                 | Constant Double
@@ -84,13 +103,19 @@ exprToExpression :: Expr -> Expression
 exprToExpression (Const x) = Constant x
 exprToExpression (Uno Neg x) = Negate (exprToExpression x)
 exprToExpression (Uno Abs x) = Absolute (exprToExpression x)
+exprToExpression (Duo Pow x y) = Power (exprToExpression x) (exprToExpression y)
 exprToExpression (Duo Mult x y) = Product [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Duo Div x y) = Divide [(exprToExpression x), (exprToExpression y)]
 exprToExpression (Duo Add x y) = Sum [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Duo Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
 exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
 
-loadExpression inp = case parse exprparser "" inp of
+-- loadExpression :: String -> Expression
+-- loadExpression = exprToExpression . getExpr . loadExpr
+
+printExpression inp = case parse exprparser "" inp of
              { Left err -> return (Constant 0)
-             ; Right ans -> return (simplify . exprToExpression $ ans)
+             ; Right ans -> return (solve . exprToExpression $ ans)
              }
 
 -- displaying an expression to the end user
@@ -99,27 +124,45 @@ showExpression :: Expression -> String
 showExpression (Constant a) = show a
 showExpression (Negate a) = "-" ++ showExpression a
 showExpression (Absolute a) = "|" ++ showExpression a ++ "|"
+showExpression (Power a b) = showExpression a ++ "^" ++ showExpression b
 showExpression (Logarithm base a) = "log<" ++ showExpression base ++ ">(" ++ showExpression a ++ ")"
-showExpression (Product []) = ""
-showExpression (Product (expression:[])) = showExpression expression
-showExpression (Product expressions) = "(" ++ showProductExpressions expressions ++ ")"
-showExpression (Sum []) = ""
-showExpression (Sum (expression:[])) = showExpression expression
-showExpression (Sum (expressions)) = "(" ++ showSumExpressions expressions ++ ")"
+showExpression (Product xs) = showProductExpression (Product xs)
+showExpression (Divide xs) = showDivideExpression (Divide xs)
+showExpression (Sum xs) = showSumExpression (Sum xs)
+showExpression (Subtract xs) = showSubtractExpression (Subtract xs)
 
-showProductExpressions :: [Expression] -> String
+-- show helpers
+showProductExpression (Product []) = ""
+showProductExpression (Product (expression:[])) = showExpression expression
+showProductExpression (Product expressions) = "(" ++ showProductExpressions expressions ++ ")"
+
+showDivideExpression (Divide []) = ""
+showDivideExpression (Divide (expression:[])) = showExpression expression
+showDivideExpression (Divide expressions) = "(" ++ showDivideExpressions expressions ++ ")"
+
+showSumExpression (Sum []) = ""
+showSumExpression (Sum (expression:[])) = showExpression expression
+showSumExpression (Sum (expressions)) = "(" ++ showSumExpressions expressions ++ ")"
+
+showSubtractExpression (Subtract []) = ""
+showSubtractExpression (Subtract (expression:[])) = showExpression expression
+showSubtractExpression (Subtract expressions) = "(" ++ showSubtractExpressions expressions ++ ")"
+
 showProductExpressions xs = join " * " (map (\x -> showExpression x) xs)
 
-showSumExpressions :: [Expression] -> String
+showDivideExpressions xs = join " / " (map (\x -> showExpression x) xs)
+
 showSumExpressions xs = join " + " (map (\x -> showExpression x) xs)
+
+showSubtractExpressions xs = join " - " (map (\x -> showExpression x) xs)
 
 instance Show Expression where
   show = showExpression
 
--- simplify = fix (collapse . join . sort)
 
 
--- joining
+
+-- merging
 fix :: (a -> a) -> a
 fix f = f (fix f)
 
@@ -162,22 +205,22 @@ simplifyAll = map (\x -> (simplify x))
 
 simplifySum :: Expression -> Expression
 simplifySum (Sum []) = (Constant 0)
-simplifySum (Sum (x:[])) = (simplify x)
-simplifySum (Sum ((Constant 0):xs)) = simplifySum (Sum xs)
-simplifySum (Sum (x:(Constant 0):xs)) = simplifySum (Sum (x:xs))
+simplifySum (Sum (x:[])) = (simplify x)-- 
+-- simplifySum (Sum ((Constant 0):xs)) = simplifySum (Sum xs)
+-- simplifySum (Sum (x:(Constant 0):xs)) = simplifySum (Sum (x:xs))
 simplifySum (Sum ((Sum xs):ys)) = simplifySum (Sum (xs ++ ys))
 simplifySum (Sum (x:(Sum ys):zs)) = simplifySum (Sum (x:(ys++zs)))
 simplifySum (Sum xs) = Sum xs
 
 simplifyProduct :: Expression -> Expression
 simplifyProduct (Product []) = (Constant 0)
-simplifyProduct (Product (x:[])) = (simplify x)
-simplifyProduct (Product ((Constant 0):xs)) = Constant 0
-simplifyProduct (Product (x:(Constant 0):xs)) = Constant 0
-simplifyProduct (Product ((Constant 1):xs)) = simplifyProduct (Product xs)
-simplifyProduct (Product (x:(Constant 1):xs)) = simplifyProduct (Product (x:xs)) 
-simplifyProduct (Product ((Sum xs):y:zs)) = Sum (map (\x -> simplify (Product (x:(y:zs)))) xs)
-simplifyProduct (Product (x:(Sum ys):zs)) = Sum (map (\y -> simplify (Product (y:(x:zs)))) ys) 
+simplifyProduct (Product (x:[])) = (simplify x)-- 
+-- simplifyProduct (Product ((Constant 0):xs)) = Constant 0
+-- simplifyProduct (Product (x:(Constant 0):xs)) = Constant 0
+-- simplifyProduct (Product ((Constant 1):xs)) = simplifyProduct (Product xs)
+-- simplifyProduct (Product (x:(Constant 1):xs)) = simplifyProduct (Product (x:xs)) 
+-- simplifyProduct (Product ((Sum xs):y:zs)) = Sum (map (\x -> simplify (Product (x:(y:zs)))) xs)
+-- simplifyProduct (Product (x:(Sum ys):zs)) = Sum (map (\y -> simplify (Product (y:(x:zs)))) ys) 
 simplifyProduct (Product ((Product xs):ys)) = simplify (Product (xs ++ ys))
 simplifyProduct (Product (x:(Product ys):zs)) = simplify (Product (x:(ys ++ zs)))
 simplifyProduct (Product xs) = (Product (simplifyAll xs))
