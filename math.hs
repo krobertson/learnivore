@@ -106,28 +106,11 @@ data Expression = Sum [Expression]
                 | Constant Double
                   deriving (Eq)
 
--- Parsing Expressions via Expr
-
-exprToExpression :: Expr -> Expression
-exprToExpression (Const x) = Constant x
-exprToExpression (Uno Neg x) = Negate (exprToExpression x)
-exprToExpression (Uno Abs x) = Absolute (exprToExpression x)
-exprToExpression (Duo Pow x y) = Power (exprToExpression x) (exprToExpression y)
-exprToExpression (Duo Mult x y) = Product [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Div x y) = Divide [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Add x y) = Sum [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
-
--- loadExpression :: String -> Expression
--- loadExpression = exprToExpression . getExpr . loadExpr
-
-printExpression inp = case parse exprparser "" inp of
-             { Left err -> return (Constant 0)
-             ; Right ans -> return (exprToExpression $ ans)
-             }
+instance Show Expression where
+  show = showExpression
 
 -- displaying an expression to the end user
+
 showExpression :: Expression -> String
 showExpression (Product xs) = join " * " (map showExpression' xs)
 showExpression (Divide xs) = join " / " (map showExpression' xs)
@@ -143,8 +126,23 @@ showExpression' (Power a b) = showExpression' a ++ "^" ++ showExpression' b
 showExpression' (Logarithm base a) = "log" ++ angleBracket (showExpression base) ++ parenthesize (showExpression a)
 showExpression' expression = parenthesize $ showExpression expression
 
-instance Show Expression where
-  show = showExpression
+-- Parsing Expressions via Expr
+
+exprToExpression :: Expr -> Expression
+exprToExpression (Const x) = Constant x
+exprToExpression (Uno Neg x) = Negate (exprToExpression x)
+exprToExpression (Uno Abs x) = Absolute (exprToExpression x)
+exprToExpression (Duo Pow x y) = Power (exprToExpression x) (exprToExpression y)
+exprToExpression (Duo Mult x y) = Product [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Duo Div x y) = Divide [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Duo Add x y) = Sum [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Duo Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
+
+printExpression inp = case parse exprparser "" inp of
+             { Left err -> return (Constant 0)
+             ; Right ans -> return (exprToExpression $ ans)
+             }
   
 data Solution = Solution [Expression]
 
