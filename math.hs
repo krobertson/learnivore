@@ -1,3 +1,4 @@
+import Data.Tree
 import Control.Monad(liftM)
 import Text.Parsec
 import Text.Parsec.String
@@ -9,8 +10,16 @@ import Text.Parsec.Combinator
 
 join :: String -> [String] -> String
 join _ [] = ""
-join _ (x:[]) = x
-join str (x:xs) = x ++ str ++ (join str xs)
+join str xs = foldl1 (\x y -> x ++ str ++ y) xs
+
+around :: String -> String -> String -> String
+around obj start end = start ++ obj ++ end
+
+parenthesize x = around x "(" ")"
+angleBracket x = around x "<" ">"
+
+printBetween :: (Show a) => String -> [a] -> IO ()
+printBetween str xs = print $ join str (map show xs)
 
 --- Exprs, a data type for containing simple binary expressions (for easy parsing)
 
@@ -115,52 +124,47 @@ exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpressio
 
 printExpression inp = case parse exprparser "" inp of
              { Left err -> return (Constant 0)
-             ; Right ans -> return (solve . exprToExpression $ ans)
+             ; Right ans -> return (exprToExpression $ ans)
              }
 
 -- displaying an expression to the end user
-
 showExpression :: Expression -> String
-showExpression (Constant a) = show a
-showExpression (Negate a) = "-" ++ showExpression a
-showExpression (Absolute a) = "|" ++ showExpression a ++ "|"
-showExpression (Power a b) = showExpression a ++ "^" ++ showExpression b
-showExpression (Logarithm base a) = "log<" ++ showExpression base ++ ">(" ++ showExpression a ++ ")"
-showExpression (Product xs) = showProductExpression (Product xs)
-showExpression (Divide xs) = showDivideExpression (Divide xs)
-showExpression (Sum xs) = showSumExpression (Sum xs)
-showExpression (Subtract xs) = showSubtractExpression (Subtract xs)
+showExpression (Product xs) = join " * " (map showExpression' xs)
+showExpression (Divide xs) = join " / " (map showExpression' xs)
+showExpression (Sum xs) = join " + " (map showExpression' xs)
+showExpression (Subtract xs) = join " - " (map showExpression' xs)
+showExpression expression = showExpression' expression
 
--- show helpers
-showProductExpression (Product []) = ""
-showProductExpression (Product (expression:[])) = showExpression expression
-showProductExpression (Product expressions) = "(" ++ showProductExpressions expressions ++ ")"
-
-showDivideExpression (Divide []) = ""
-showDivideExpression (Divide (expression:[])) = showExpression expression
-showDivideExpression (Divide expressions) = "(" ++ showDivideExpressions expressions ++ ")"
-
-showSumExpression (Sum []) = ""
-showSumExpression (Sum (expression:[])) = showExpression expression
-showSumExpression (Sum (expressions)) = "(" ++ showSumExpressions expressions ++ ")"
-
-showSubtractExpression (Subtract []) = ""
-showSubtractExpression (Subtract (expression:[])) = showExpression expression
-showSubtractExpression (Subtract expressions) = "(" ++ showSubtractExpressions expressions ++ ")"
-
-showProductExpressions xs = join " * " (map (\x -> showExpression x) xs)
-
-showDivideExpressions xs = join " / " (map (\x -> showExpression x) xs)
-
-showSumExpressions xs = join " + " (map (\x -> showExpression x) xs)
-
-showSubtractExpressions xs = join " - " (map (\x -> showExpression x) xs)
+showExpression' :: Expression -> String
+showExpression' (Constant a) = show a
+showExpression' (Negate a) = "-" ++ showExpression' a
+showExpression' (Absolute a) = around (showExpression a) "|" "|"
+showExpression' (Power a b) = showExpression' a ++ "^" ++ showExpression' b
+showExpression' (Logarithm base a) = "log" ++ angleBracket (showExpression base) ++ parenthesize (showExpression a)
+showExpression' expression = parenthesize $ showExpression expression
 
 instance Show Expression where
   show = showExpression
+  
+type Solution = [Expression]
 
+br :: Tree a -> [a]
+br t = map rootLabel $
+      concat $
+      takeWhile (not . null) $               
+      iterate (concatMap subForest) [t]
+-- 
+-- solve :: Expression -> Solution
+-- solve expression = takeWhile (not . (solved expression)) $
+--                    br . transform $ 
+--                    expression
+--                    
+-- solved :: Expression -> Expression -> Bool
+-- solved x (Constant y) = 
+printSolution :: [Expression] -> IO ()
+printSolution = printBetween " \n=>\n"
 
-
+-- transform :: Expression -> Tree Expression
 
 -- merging
 fix :: (a -> a) -> a
@@ -192,8 +196,11 @@ distribute _ = undefined
 -- simplifications --
 simplify :: Expression -> Expression
 simplify (Sum xs) = simplifySum (Sum (simplifyAll xs))
+simplify (Subtract xs) = (Subtract (simplifyAll xs))
 simplify (Product xs) = simplifyProduct (Product (simplifyAll xs))
+simplify (Divide xs) = (Divide (simplifyAll xs))
 simplify (Logarithm base (Product (xs))) = Sum (map (\x -> (Logarithm (simplify base) (simplify x))) (simplifyAll xs))
+simplify (Power base expo) = Power (simplify base) (simplify expo)
 simplify (Constant a) = Constant a
 simplify (Negate (Negate xs)) = simplify xs
 simplify (Absolute (Negate xs)) = simplify xs
@@ -234,27 +241,27 @@ collapseProduct :: Expression -> Expression
 collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
 
 collapse :: Expression -> Expression
-collapse (Sum xs) = collapseSum (simplify (Sum (flattenAll xs)))
-collapse (Product xs) = collapseProduct (simplify (Product (flattenAll xs)))
+collapse (Sum xs) = collapseSum (simplify (Sum (answerAll xs)))
+collapse (Product xs) = collapseProduct (simplify (Product (answerAll xs)))
 collapse (Logarithm (Constant base) (Constant expr)) = Constant (logBase base expr)
-collapse (Logarithm base expr) = (Logarithm (flatten base) (flatten expr))
-collapse (Absolute expr) = (Absolute (flatten expr))
-collapse (Negate expr) = (Negate (flatten expr))
+collapse (Logarithm base expr) = (Logarithm (answer base) (answer expr))
+collapse (Absolute expr) = (Absolute (answer expr))
+collapse (Negate expr) = (Negate (answer expr))
 collapse x = x 
 
 collapseAll :: [Expression] -> [Expression]
 collapseAll = map (\x -> collapse x)
 
-flatten :: Expression -> Expression
-flatten = simplify . collapse
+answer :: Expression -> Expression
+answer = simplify . collapse
 
-flattenAll :: [Expression] -> [Expression]
-flattenAll =  simplifyAll . collapseAll
+answerAll :: [Expression] -> [Expression]
+answerAll =  simplifyAll . collapseAll
 
-solve :: Expression -> Expression
-solve x 
-  | (flatten x) == (flatten . flatten $ x) = (flatten x)
-  | otherwise = solve (flatten x) 
+-- solve :: Expression -> Expression
+-- solve x 
+--   | (answer x) == (answer . answer $ x) = (answer x)
+--   | otherwise = solve (answer x) 
 -- evaluation --
 
 evaluate :: Expression -> Double
