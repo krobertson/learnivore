@@ -95,16 +95,16 @@ TokenParser{ parens = m_parens
 
 --- Expressions
 
-data Expression = Sum [Expression]
+data Expression = Constant Double
+                | Absolute (Expression)
+                | Negate (Expression)
+                | Sum [Expression]
                 | Subtract [Expression]
                 | Product [Expression]
                 | Divide [Expression]
-                | Logarithm (Expression) (Expression)
                 | Power (Expression) (Expression)
-                | Absolute (Expression)
-                | Negate (Expression)
-                | Constant Double
-                  deriving (Eq)
+                | Logarithm (Expression) (Expression)
+                  deriving (Eq, Ord)
 
 instance Show Expression where
   show = showExpression
@@ -165,11 +165,26 @@ br t = map rootLabel $
 --                    
 -- solved :: Expression -> Expression -> Bool
 -- solved x (Constant y) = 
+  
 printSolution :: Solution -> IO ()
 printSolution = putStrLn . showSolution
 
--- transform :: Expression -> Tree Expression
+transform :: Expression -> Tree Expression
+transform expression = Node expression (twiddle expression) 
 
+twiddle :: Expression -> 
+twiddle expression = map (\x -> Node (x expression) []) transformations  
+
+transformations = [sortExpression] ++ multiplicationTransformations splitLog]
+
+multiplicationTransformations = [multiplyOne, multiplyZero, distributeMult, concentratePower]
+divideTransformations = [toMult]
+sumTransformations = [addZero, concentrateMult, concentrateLog]
+subtractTransformations = []
+logTransformations = [splitMult]
+powerTransformations = []
+absoluteTransformations = []
+negativeTransformations = [doubleInversion]
 -- merging
 fix :: (a -> a) -> a
 fix f = f (fix f)
