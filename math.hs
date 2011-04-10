@@ -146,7 +146,13 @@ showExpression' expression = parenthesize $ showExpression expression
 instance Show Expression where
   show = showExpression
   
-type Solution = [Expression]
+data Solution = Solution [Expression]
+
+showSolution :: Solution -> String
+showSolution (Solution xs) = join "\n=>\n" (map show xs)
+
+instance Show Solution where
+  show = showSolution
 
 br :: Tree a -> [a]
 br t = map rootLabel $
@@ -161,8 +167,8 @@ br t = map rootLabel $
 --                    
 -- solved :: Expression -> Expression -> Bool
 -- solved x (Constant y) = 
-printSolution :: [Expression] -> IO ()
-printSolution = printBetween " \n=>\n"
+printSolution :: Solution -> IO ()
+printSolution = putStrLn . showSolution
 
 -- transform :: Expression -> Tree Expression
 
