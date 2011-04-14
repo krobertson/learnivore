@@ -110,6 +110,16 @@ data Expression = Constant Double
 instance Show Expression where
   show = showExpression
 
+emap :: (Expression -> Expression) -> Expression -> Expression
+emap fn (Constant x) = (Constant x)
+emap fn (Absolute x) = Absolute (emap fn x)
+emap fn (Negate x) = Negate (emap fn x)
+emap fn (Sum xs) = Sum (map (emap fn) xs)
+emap fn (Subtract xs) = Subtract (map (emap fn) xs)
+emap fn (Product xs) = Product (map (emap fn) xs)
+emap fn (Divide xs) = Divide (map (emap fn) xs)
+emap fn (Power x y) = Power (emap fn x) (emap fn y)
+emap fn (Logarithm x y) = Logarithm (emap fn x) (emap fn y)
 -- displaying an expression to the end user
 
 showExpression :: Expression -> String
@@ -185,7 +195,7 @@ twiddle expression transforms = if (not . solved $ expression)
                                 else []
                                     
 
-transformations = [sortExpression, absolutify, multiplyByZero, multiplyByOne, collapseSum, collapseProduct]-- [sortExpression] ++ multiplicationTransformations splitLog
+transformations = [absolutify, multiplyByZero, multiplyByOne, collapseSum, collapseProduct, (emap collapseSum), (emap collapseProduct), (emap sortExpression), logify, squash]-- [sortExpression] ++ multiplicationTransformations splitLog
 
 -- transformations
 sortExpression :: Expression -> Expression
@@ -200,23 +210,50 @@ sortExpression (Negate y) = Negate (sortExpression y)
 sortExpression z = z
 
 multiplyByZero :: Expression -> Expression
-multiplyByZero (Product xs) = if any (\x -> x == Constant 0.0) xs then Constant 0.0 else (Product xs)
+multiplyByZero (Product xs) = if any (\x -> x == Constant 0.0) xs then Constant 0.0 else (Product (map (emap multiplyByZero) xs))
 multiplyByZero xs = xs
 
 multiplyByOne :: Expression -> Expression
-multiplyByOne (Product xs) = Product (filter (\x -> not (x == Constant 1.0)) xs)
+multiplyByOne (Product xs) = Product (filter (\x -> not (x == Constant 1.0)) (map (emap multiplyByOne) xs))
 multiplyByOne xs = xs
 
 absolutify :: Expression -> Expression
 absolutify (Absolute (Negate x)) = x
+absolutify (Absolute x) = x
 absolutify expression = expression
+
+logify :: Expression -> Expression
+logify (Logarithm (Constant x) (Constant y)) = Constant (logBase x y)
+logify expression = expression
 
 distributeMultiplicationOverSum :: Expression -> Expression
 distributeMultiplicationOverSum (Product ((Sum xs):y:zs)) = Sum (map (\x -> (Product (x:(y:zs)))) xs)
 distributeMultiplicationOverSum (Product (x:(Sum ys):zs)) = Sum (map (\y -> (Product (y:(x:zs)))) ys)
 
+squash :: Expression -> Expression
+squash (Sum xs) = squashSum (Sum (map squash xs))
+squash (Subtract xs) = squashSubtract (Subtract (map squash xs))
+squash (Product xs) = squashProduct (Product (map squash xs))
+squash (Divide xs) = squashDivide (Divide (map squash xs))
+squash (Logarithm x y) = Logarithm (squash x) (squash y)
+squash (Power x y) = Power (squash x) (squash y)
+squash (Absolute x) = Absolute (squash x)
+squash (Negate x) = Negate (squash x)
+squash x = x
 
 
+squashSum (Sum (x:[])) = x
+squashSum (Sum ((Sum xs):ys)) = Sum (xs ++ ys)
+squashSum (Sum (x:(Sum xs):ys)) = Sum (x:xs ++ ys)
+squashSum x = x
+
+squashProduct (Product (x:[])) = x
+squashProduct (Product ((Product xs):ys)) = Product (xs ++ ys)
+squashProduct (Product (x:(Product xs):ys)) = Product (x:xs ++ ys)
+squashProduct x = x
+
+squashSubtract = undefined
+squashDivide = undefined
 
 -- multiplicationTransformations = [multiplyOne, multiplyZero, distributeMult, concentratePower]
 -- divideTransformations = [toMult]
@@ -233,8 +270,8 @@ fix f = f (fix f)
 
 add :: Expression -> Expression -> Expression
 add (Constant a) (Constant b) = Constant (a + b)
-add (Constant a) (Sum xs) = Sum ((Constant a):xs)
-add (Sum xs) (Constant a) = Sum ((Constant a):xs)
+add (Sum xs) expression = Sum (expression:xs)
+add expression (Sum xs) = Sum (expression:xs)
 add (Constant a) expression = Sum ((Constant a):[expression])
 add expression (Constant a) = Sum ((Constant a):[expression])
 add expression1 expression2 = Sum [expression1, expression2]
@@ -246,8 +283,9 @@ myNegate expression = Negate expression
 
 multiply :: Expression -> Expression -> Expression
 multiply (Constant a) (Constant b) = Constant (a * b)
-multiply (Constant a) (Negate (Constant b)) = Constant (negate (a * b))
 multiply (Constant a) expression = Product [Constant a, expression]
+multiply (Product xs) ys = Product (xs ++ [ys])
+multiply xs (Product ys) = Product (xs:ys)
 multiply expression (Constant a) = multiply (Constant a) expression
 multiply (Negate a) (Negate b) = multiply a b
 multiply (Negate a) expression = Product [Negate a, expression]
@@ -292,11 +330,11 @@ simplifyProduct (Product xs) = (Product (simplifyAll xs))
 
 collapseSum :: Expression -> Expression
 collapseSum (Sum xs) = foldl add (Constant 0) xs
-collapseSum xs = xs
+collapseSum xs = emap collapseSum xs
 
 collapseProduct :: Expression -> Expression
 collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
-collapseProduct xs = xs
+collapseProduct xs = emap collapseProduct xs
 
 -- collapse :: Expression -> Expression
 -- collapse (Sum xs) = collapseSum (simplify (Sum (answerAll xs)))
