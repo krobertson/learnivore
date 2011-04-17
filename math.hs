@@ -169,13 +169,24 @@ bft t = map rootLabel $
       takeWhile (not . null) $               
       iterate (concatMap subForest) [t]
 
+generatePath :: [Expression] -> [Expression]
+generatePath expressions = foldl takeIfAncestor [(head xs)] (tail xs)
+                            where xs = reverse expressions
+                                                    
+takeIfAncestor :: [Expression] -> Expression -> [Expression]
+takeIfAncestor path expression
+            | (head path) `elem` (map rootLabel $ expand expression) = expression:path
+            | otherwise = path
+
 takeThrough :: (a -> Bool) -> [a] -> [a]
 takeThrough fn xs = (takeWhile fn xs) ++ [(head (dropWhile fn xs))]
 
 solve :: Expression -> Solution
 solve expression = Solution solutionPath
-                    where solutionPath = takeThrough (not . solved) $ 
-                                         bft . solutionTree $ expression
+                    where solutionPath = generatePath . bfs $ expression
+                                         
+bfs :: Expression -> [Expression]
+bfs expression = takeThrough (not . solved) $ bft . solutionTree $ expression
 
 collapse :: Expression -> Expression
 collapse expression = head $ dropWhile (not . solved) $ 
