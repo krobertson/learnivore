@@ -64,7 +64,7 @@ term = m_parens exprparser
 def = emptyDef{ commentStart = "{-"
               , commentEnd = "-}"
               , identStart = letter
-              , identLetter = letter
+              , identLetter = oneOf $ ['1'..'9']
               , opStart = oneOf "|*-+=:^/"
               , opLetter = oneOf "|*-+=:^/"
               , reservedOpNames = ["*", "+", "-", "^", "/", "=", ":="]
@@ -84,6 +84,7 @@ TokenParser{ parens = m_parens
 
 data Expression = Constant Double
                 | Integ Double
+                | Variable String -- Product [(Variable "x"), (Integ 2)] = 2x
                 | Absolute (Expression)
                 | Negate (Expression)
                 | Sum [Expression]
@@ -99,7 +100,7 @@ instance Show Expression where
 
 -- displaying an expression to the end user
 
-showExpression :: Expression -> String
+showExpression :: Expression-> String
 showExpression (Product xs) = join " * " (List.map showExpression' xs)
 showExpression (Divide xs) = join " / " (List.map showExpression' xs)
 showExpression (Sum xs) = join " + " (List.map showExpression' xs)
@@ -107,6 +108,7 @@ showExpression (Subtract xs) = join " - " (List.map showExpression' xs)
 showExpression expression = showExpression' expression
 
 showExpression' :: Expression -> String
+showExpression' (Variable string) = string
 showExpression' (Constant a) = show a
 showExpression' (Integ a) = show a
 showExpression' (Negate a) = "-" ++ showExpression' a
@@ -118,6 +120,7 @@ showExpression' expression = parenthesize $ showExpression expression
 -- Parsing Expressions via Expr
 
 exprToExpression :: Expr -> Expression
+exprToExpression (Var str) = Variable str
 exprToExpression (Const x) = Constant x
 exprToExpression (In x) = Integ (fromInteger x :: Double)
 exprToExpression (Uno Neg x) = Negate (exprToExpression x)
@@ -129,12 +132,6 @@ exprToExpression (Duo Add x y) = Sum [(exprToExpression x), (exprToExpression y)
 exprToExpression (Duo Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
 exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
 
-solveExpression :: String -> IO ()
-solveExpression inp = case parse exprparser "" inp of
-             { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
-             ; Right ans -> putStrLn . show . solve $ (exprToExpression ans)
-             }
-  
 data Solution = Solution (Maybe [Expression]) 
 
 showSolution :: Solution -> String
@@ -144,22 +141,8 @@ showSolution (Solution Nothing) = "There is no valid solution"
 instance Show Solution where
   show = showSolution
    
--- A future version of this function should use Data.Graph.AStar instead --
-solve :: Expression -> Solution
-solve expression = Solution (case solutionPath of (Just path) -> Just (expression:path)
-                                                  Nothing -> Nothing)
-                     where solutionPath = aStar expressionGraph (\x y -> 1) expressionSize solved expression
-
-expressionGraph :: Expression -> Set Expression                          
-expressionGraph = fromList . expand
-
-transformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseProduct, squash,
-                   logify, exponentiate, negatify, sortExpression]
-                          
+-- A future version of this function should use Data.Graph.AStar instead --                        
 expressionSize :: Expression -> Integer
-expressionSize (Constant x) = 1
-expressionSize (Integ x) = 1
 expressionSize (Negate x) = expressionSize x
 expressionSize (Absolute x) = 1 + expressionSize x
 expressionSize (Sum xs) = foldl (+) 1 $ List.map expressionSize xs
@@ -168,16 +151,72 @@ expressionSize (Product xs) = foldl (+) 1 $ List.map expressionSize xs
 expressionSize (Divide xs) = foldl (+) 1 $ List.map expressionSize xs
 expressionSize (Power x y) = 1 + expressionSize x + expressionSize y
 expressionSize (Logarithm x y) = 1 + expressionSize x + expressionSize y
+expressionSize _ = 1
 
 solved :: Expression -> Bool
-solved (Constant x) = True
-solved (Integ x) = True
-solved (Negate (Constant x)) = True
-solved (Negate (Integ x)) = True
-solved x = False
-                                
+solved (Absolute x) = varSolved x
+solved x 
+     | (solved x) || (varSolved x) = True
+     | otherwise = False
+
+varSolved :: Expression -> Bool
+varSolved (Variable _) = True
+varSolved (Negate (Variable _)) = True
+varSolved (Product [(Variable _), (Constant _)]) = True
+varSolved (Product [(Constant _), (Variable _)]) = True
+varSolved (Product [(Variable _), (Integ _)])    = True
+varSolved (Product [(Integ _), (Variable _)])    = True
+varSolved (Divide [(Variable _), (Constant _)])  = True
+varSolved (Divide [(Constant _), (Variable _)])  = True
+varSolved (Divide [(Variable _), (Integ _)])     = True
+varSolved (Divide [(Integ _), (Variable _)])     = True
+varSolved (Sum [(Variable _), (Constant _)])     = True
+varSolved (Sum [(Constant _), (Variable _)])     = True
+varSolved (Sum [(Variable _), (Integ _)])        = True
+varSolved (Sum [(Integ _), (Variable _)])        = True
+varSolved (Logarithm (Variable str) x)
+          | constSolved x = True
+          | (numberOfVariables (Logarithm (Variable str) x)) == 1 = True
+          | otherwise = False
+varSolved (Logarithm x (Variable str))
+          | constSolved x = True
+          | (numberOfVariables (Logarithm x (Variable str))) == 1 = True
+          | otherwise = False
+varSolved (Power (Variable str) x)
+          | constSolved x = True
+          | (numberOfVariables (Power (Variable str) x)) == 1 = True
+          | otherwise = False
+varSolved (Power x (Variable str))
+          | constSolved x = True
+          | (numberOfVariables (Power x (Variable str))) == 1 = True
+          | otherwise = False
+varSolved _ = False
+
+constSolved :: Expression -> Bool
+constSolved (Constant _) = True
+constSolved (Integ _) = True
+constSolved _ = False
+
+numberOfVariables :: Expression -> Int
+numberOfVariables expression = length . listOfVariables $ expression
+
+listOfVariables :: Expression -> [String]
+listOfVariables (Variable str) = [str]
+listOfVariables (Absolute x) = listOfVariables x
+listOfVariables (Negate x) = listOfVariables x
+listOfVariables (Product xs) = nub . concatMap listOfVariables $ xs
+listOfVariables (Divide xs) = nub . concatMap listOfVariables $ xs
+listOfVariables (Sum xs) = nub . concatMap listOfVariables $ xs
+listOfVariables (Subtract xs) = nub . concatMap listOfVariables $ xs
+listOfVariables (Logarithm x y) = nub . concatMap listOfVariables $ x:y:[]
+listOfVariables (Power x y) = nub . concatMap listOfVariables $ x:y:[]
+listOfVariables _ = []
+
 expand :: Expression -> [Expression]
 expand = twiddle $ List.map exmap transformations
+
+expressionGraph :: Expression -> Set Expression                          
+expressionGraph = fromList . expand
 
 twiddle :: [Expression -> Expression] -> Expression -> [Expression]
 twiddle transforms expression = if (not . solved $ expression) 
@@ -195,7 +234,19 @@ exmap fn (Logarithm x y) = fn $ Logarithm (exmap fn x) (exmap fn y)
 exmap fn (Absolute x) = fn $ Absolute (exmap fn x)
 exmap fn (Negate y) = fn $ Negate (exmap fn y)
 exmap fn z = fn z
-              
+      
+solve :: Expression -> Solution
+solve expression = Solution (case solutionPath of (Just path) -> Just (expression:path)
+                                                  Nothing -> Nothing)
+                     where solutionPath = if solved expression then Just [expression] else aStar expressionGraph (\x y -> (abs $ (expressionSize x) - (expressionSize y)) +  1) expressionSize solved expression        
+
+
+solveExpression :: String -> IO ()
+solveExpression inp = case parse exprparser "" inp of
+             { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
+             ; Right ans -> putStrLn . show . solve $ (exprToExpression ans)
+             }
+  
 
 -- transformations
 
@@ -211,11 +262,11 @@ sortExpression (Negate y) = Negate y
 sortExpression z = z
 
 multiplyByZero :: Expression -> Expression
-multiplyByZero (Product xs) = if any (\x -> x == Constant 0.0) xs then Constant 0.0 else (Product (List.map multiplyByZero xs))
+multiplyByZero (Product xs) = if (any (\x -> (x == Constant 0.0) || (x == Integ 0.0)) (List.map multiplyByZero xs)) then Integ 0.0 else (Product xs)
 multiplyByZero xs = xs
 
 multiplyByOne :: Expression -> Expression
-multiplyByOne (Product xs) = Product (List.filter (\x -> not (x == Constant 1.0)) (List.map multiplyByOne xs))
+multiplyByOne (Product xs) = Product (List.filter (\x -> not $ (x == Constant 1.0) || (x == Integ 1.0)) (List.map multiplyByOne xs))
 multiplyByOne xs = xs
 
 absolutify :: Expression -> Expression
@@ -224,6 +275,7 @@ absolutify (Absolute x) = x
 absolutify expression = expression
 
 logify :: Expression -> Expression
+logify (Logarithm x (Product xs)) = Sum (List.map (Logarithm x) xs)
 logify (Logarithm (Constant x) (Constant y)) = Constant (logBase x y)
 logify (Logarithm (Integ x) (Integ y)) = Constant (logBase x y)
 logify (Logarithm (Integ x) (Constant y)) = Constant (logBase x y)
@@ -280,6 +332,10 @@ collapseSum xs = xs
 collapseProduct :: Expression -> Expression
 collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
 collapseProduct xs = xs
+
+transformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
+                   collapseSum, collapseProduct, squash, --collapseVariables,
+                   logify, exponentiate, negatify, sortExpression]
 -- merging
 
 add :: Expression -> Expression -> Expression
@@ -329,6 +385,7 @@ evaluate (Product expressions)        = foldr ((*) . evaluate) 1 expressions
 evaluate (Divide expressions)         = foldl (\x y -> x / (evaluate y)) (evaluate . head $ expressions) (tail expressions)
 evaluate (Logarithm base expression)  = logBase (evaluate base) (evaluate expression)
 evaluate (Power base expo)            = (evaluate base) ** (evaluate expo)
+evaluate (Variable str) = error "Cannot evaluate a variable"
 
 
 -- equations
