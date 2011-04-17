@@ -79,21 +79,6 @@ TokenParser{ parens = m_parens
            , semiSep1 = m_semiSep1
            , whiteSpace = m_whiteSpace } = makeTokenParser def
 
--- loadExpr :: String -> Either ParseError Expr
--- loadExpr inp = case parse exprparser "" inp of
---                { Left err -> return err
---                ; Right ans -> return ans
---                }
---                
--- printExpr :: Either ParseError Expr -> IO ()
--- printExpr (Left err) = print err
--- printExpr (Right expr) = print expr
-
--- getExpr :: Either ParseError Expr -> Expr
--- getExpr (Left _) = Const 0.0
--- getExpr (Right x) = x
--- 
-
 --- Expressions
 
 data Expression = Constant Double
@@ -213,20 +198,20 @@ twiddle transforms expression = if (not . solved $ expression)
                                 else []
                                     
 
-transformations = [squash, absolutify, logify, 
+transformations = [absolutify, logify, 
                    multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseProduct, (emap sortExpression)]
+                   collapseSum, collapseProduct, squash, sortExpression]
 
 -- transformations
 sortExpression :: Expression -> Expression
-sortExpression (Sum xs) = Sum (sort (map sortExpression xs))
-sortExpression (Subtract xs) = Subtract (map sortExpression xs)
-sortExpression (Product xs) = Product (sort (map sortExpression xs))
-sortExpression (Divide xs) = Divide (map sortExpression xs)
-sortExpression (Power x y) = Power (sortExpression x) (sortExpression y)
-sortExpression (Logarithm x y) = Logarithm (sortExpression x) (sortExpression y)
-sortExpression (Absolute x) = Absolute (sortExpression x)
-sortExpression (Negate y) = Negate (sortExpression y)
+sortExpression (Sum xs) = Sum (sort (map (emap sortExpression) xs))
+sortExpression (Subtract xs) = Subtract (map (emap sortExpression) xs)
+sortExpression (Product xs) = Product (sort (map (emap sortExpression) xs))
+sortExpression (Divide xs) = Divide (map (emap sortExpression) xs)
+sortExpression (Power x y) = Power (emap sortExpression x) (emap sortExpression y)
+sortExpression (Logarithm x y) = Logarithm (emap sortExpression x) (emap sortExpression y)
+sortExpression (Absolute x) = Absolute (emap sortExpression x)
+sortExpression (Negate y) = Negate (emap sortExpression y)
 sortExpression z = z
 
 multiplyByZero :: Expression -> Expression
