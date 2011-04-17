@@ -148,6 +148,10 @@ solve expression = Solution (case solutionPath of (Just path) -> Just (expressio
 
 expressionGraph :: Expression -> Set Expression                          
 expressionGraph = fromList . expand
+
+transformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
+                   collapseSum, collapseProduct, squash,
+                   logify, exponentiate, negatify, sortExpression]
                           
 expressionSize :: Expression -> Integer
 expressionSize (Constant x) = 1
@@ -159,17 +163,11 @@ expressionSize (Product xs) = foldl (+) 1 $ List.map expressionSize xs
 expressionSize (Divide xs) = foldl (+) 1 $ List.map expressionSize xs
 expressionSize (Power x y) = 1 + expressionSize x + expressionSize y
 expressionSize (Logarithm x y) = 1 + expressionSize x + expressionSize y
-  
--- solve helper functions
 
 solved :: Expression -> Bool
 solved (Constant x) = True
 solved (Negate (Constant x)) = True
 solved x = False
-
-transformations = [negatify, absolutify, multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseProduct, squash,
-                   logify, exponentiate, sortExpression]
                                 
 expand :: Expression -> [Expression]
 expand = twiddle $ List.map exmap transformations
@@ -292,6 +290,8 @@ multiply expression (Constant a) = multiply (Constant a) expression
 multiply (Negate a) (Negate b) = multiply a b
 multiply (Negate a) expression = Product [Negate a, expression]
 multiply expression1 expression2 = Product [expression1, expression2]
+
+-- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 
 evaluate :: Expression -> Double
 evaluate (Constant value)             = value
