@@ -1,5 +1,6 @@
 import List
-import Data.Tree
+import Data.Set
+import Data.Graph.AStar
 import Control.Monad(liftM)
 import Text.Parsec
 import Text.Parsec.String
@@ -20,7 +21,7 @@ parenthesize x = around x "(" ")"
 angleBracket x = around x "<" ">"
 
 printBetween :: (Show a) => String -> [a] -> IO ()
-printBetween str xs = print $ join str (map show xs)
+printBetween str xs = print $ join str (List.map show xs)
 
 --- Exprs, a data type for containing simple binary expressions (for easy parsing)
 
@@ -98,10 +99,10 @@ instance Show Expression where
 -- displaying an expression to the end user
 
 showExpression :: Expression -> String
-showExpression (Product xs) = join " * " (map showExpression' xs)
-showExpression (Divide xs) = join " / " (map showExpression' xs)
-showExpression (Sum xs) = join " + " (map showExpression' xs)
-showExpression (Subtract xs) = join " - " (map showExpression' xs)
+showExpression (Product xs) = join " * " (List.map showExpression' xs)
+showExpression (Divide xs) = join " / " (List.map showExpression' xs)
+showExpression (Sum xs) = join " + " (List.map showExpression' xs)
+showExpression (Subtract xs) = join " - " (List.map showExpression' xs)
 showExpression expression = showExpression' expression
 
 showExpression' :: Expression -> String
@@ -130,18 +131,35 @@ printExpression inp = case parse exprparser "" inp of
              ; Right ans -> return (exprToExpression $ ans)
              }
   
-data Solution = Solution [Expression]
+data Solution = Solution (Maybe [Expression]) 
 
 showSolution :: Solution -> String
-showSolution (Solution xs) = join "\n=>\n" (map show xs)
+showSolution (Solution (Just xs)) = join "\n=>\n" (List.map show xs)
+showSolution (Solution Nothing) = "There is no valid solution"
 
 instance Show Solution where
   show = showSolution
-  
+   
+-- A future version of this function should use Data.Graph.AStar instead --
 solve :: Expression -> Solution
-solve expression = Solution solutionPath
-                    where solutionPath = generatePath . bfs $ expression
+solve expression = Solution (case solutionPath of (Just path) -> Just (expression:path)
+                                                  Nothing -> Nothing)
+                     where solutionPath = aStar expressionGraph (\x y -> 1) expressionSize solved expression
 
+expressionGraph :: Expression -> Set Expression                          
+expressionGraph = fromList . expand
+                          
+expressionSize :: Expression -> Integer
+expressionSize (Constant x) = 1
+expressionSize (Negate x) = expressionSize x
+expressionSize (Absolute x) = 1 + expressionSize x
+expressionSize (Sum xs) = foldl (+) 1 $ List.map expressionSize xs
+expressionSize (Subtract xs) = foldl (+) 1 $ List.map expressionSize xs
+expressionSize (Product xs) = foldl (+) 1 $ List.map expressionSize xs
+expressionSize (Divide xs) = foldl (+) 1 $ List.map expressionSize xs
+expressionSize (Power x y) = 1 + expressionSize x + expressionSize y
+expressionSize (Logarithm x y) = 1 + expressionSize x + expressionSize y
+  
 -- solve helper functions
 
 solved :: Expression -> Bool
@@ -149,27 +167,24 @@ solved (Constant x) = True
 solved (Negate (Constant x)) = True
 solved x = False
 
-transformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseProduct, squash, 
+transformations = [negatify, absolutify, multiplyByZero, multiplyByOne, distribute, 
+                   collapseSum, collapseProduct, squash,
                    logify, exponentiate, sortExpression]
+                                
+expand :: Expression -> [Expression]
+expand = twiddle $ List.map exmap transformations
 
-solutionTree :: Expression -> Tree Expression
-solutionTree expression = Node expression (map (solutionTree . rootLabel) $ expand expression)
-
-expand :: Expression -> Forest Expression
-expand = twiddle $ map exmap transformations
-
-twiddle :: [Expression -> Expression] -> Expression -> Forest Expression
+twiddle :: [Expression -> Expression] -> Expression -> [Expression]
 twiddle transforms expression = if (not . solved $ expression) 
-                                then filter (\x -> not (rootLabel x == expression)) $
-                                  map (\x -> Node (x expression) []) transforms
+                                then List.filter (not . (== expression)) $
+                                     List.map ($ expression) transforms
                                 else []
                   
 exmap :: (Expression -> Expression) -> Expression -> Expression
-exmap fn (Sum xs) = fn $ Sum (map (exmap fn) xs)
-exmap fn (Subtract xs) = fn $ Subtract (map (exmap fn) xs)
-exmap fn (Product xs) = fn $ Product (map (exmap fn) xs)
-exmap fn (Divide xs) = fn $ Divide (map (exmap fn) xs)
+exmap fn (Sum xs) = fn $ Sum (List.map (exmap fn) xs)
+exmap fn (Subtract xs) = fn $ Subtract (List.map (exmap fn) xs)
+exmap fn (Product xs) = fn $ Product (List.map (exmap fn) xs)
+exmap fn (Divide xs) = fn $ Divide (List.map (exmap fn) xs)
 exmap fn (Power x y) = fn $ Power (exmap fn x) (exmap fn y)
 exmap fn (Logarithm x y) = fn $ Logarithm (exmap fn x) (exmap fn y)
 exmap fn (Absolute x) = fn $ Absolute (exmap fn x)
@@ -191,11 +206,11 @@ sortExpression (Negate y) = Negate y
 sortExpression z = z
 
 multiplyByZero :: Expression -> Expression
-multiplyByZero (Product xs) = if any (\x -> x == Constant 0.0) xs then Constant 0.0 else (Product (map multiplyByZero xs))
+multiplyByZero (Product xs) = if any (\x -> x == Constant 0.0) xs then Constant 0.0 else (Product (List.map multiplyByZero xs))
 multiplyByZero xs = xs
 
 multiplyByOne :: Expression -> Expression
-multiplyByOne (Product xs) = Product (filter (\x -> not (x == Constant 1.0)) (map multiplyByOne xs))
+multiplyByOne (Product xs) = Product (List.filter (\x -> not (x == Constant 1.0)) (List.map multiplyByOne xs))
 multiplyByOne xs = xs
 
 absolutify :: Expression -> Expression
@@ -211,17 +226,21 @@ exponentiate :: Expression -> Expression
 exponentiate (Power (Constant x) (Constant y)) = Constant (x ** y)
 exponentiate expression = expression
 
+negatify :: Expression -> Expression
+negatify (Negate (Constant x)) = (Constant (0-x))
+negatify x = x
+
 distribute :: Expression -> Expression
 distribute (Product (x:[])) = x
-distribute (Product ((Sum xs):ys)) = Sum (map (\x -> Product (x:ys)) xs)
-distribute (Product (x:(Sum ys):zs)) = Sum (map (\y -> Product (x:(y:zs))) ys)
+distribute (Product ((Sum xs):ys)) = Sum (List.map (\x -> Product (x:ys)) xs)
+distribute (Product (x:(Sum ys):zs)) = Sum (List.map (\y -> Product (x:(y:zs))) ys)
 distribute x = x
 
 squash :: Expression -> Expression
-squash (Sum xs) = squashSum (Sum (map squash xs))
-squash (Subtract xs) = squashSubtract (Subtract (map squash xs))
-squash (Product xs) = squashProduct (Product (map squash xs))
-squash (Divide xs) = squashDivide (Divide (map squash xs))
+squash (Sum xs) = squashSum (Sum (List.map squash xs))
+squash (Subtract xs) = squashSubtract (Subtract (List.map squash xs))
+squash (Product xs) = squashProduct (Product (List.map squash xs))
+squash (Divide xs) = squashDivide (Divide (List.map squash xs))
 squash (Logarithm x y) = Logarithm (squash x) (squash y)
 squash (Power x y) = Power (squash x) (squash y)
 squash (Absolute x) = Absolute (squash x)
@@ -242,39 +261,14 @@ squashProduct x = x
 squashSubtract = undefined
 squashDivide = undefined
 
--- helpers
+collapseSum :: Expression -> Expression
+collapseSum (Sum xs) = foldl add (Constant 0) xs
+collapseSum xs = xs
 
-bft :: Tree a -> [a]
-bft t = map rootLabel $
-      concat $
-      takeWhile (not . null) $               
-      iterate (concatMap subForest) [t]
-
-generatePath :: [Expression] -> [Expression]
-generatePath expressions = foldl takeIfAncestor [(head xs)] (tail xs)
-                            where xs = reverse expressions
-                                                    
-takeIfAncestor :: [Expression] -> Expression -> [Expression]
-takeIfAncestor path expression
-            | (head path) `elem` (map rootLabel $ expand expression) = expression:path
-            | otherwise = path
-
-takeThrough :: (a -> Bool) -> [a] -> [a]
-takeThrough fn xs = (takeWhile fn xs) ++ [(head (dropWhile fn xs))]
-                                         
-bfs :: Expression -> [Expression]
-bfs expression = takeThrough (not . solved) $ bft . solutionTree $ expression
-
-collapse :: Expression -> Expression
-collapse expression = head $ dropWhile (not . solved) $ 
-                      bft . solutionTree $ expression 
-
-printSolution :: Solution -> IO ()
-printSolution = putStrLn . showSolution
-
+collapseProduct :: Expression -> Expression
+collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
+collapseProduct xs = xs
 -- merging
-fix :: (a -> a) -> a
-fix f = f (fix f)
 
 add :: Expression -> Expression -> Expression
 add (Constant a) (Constant b) = Constant (a + b)
@@ -297,17 +291,7 @@ multiply xs (Product ys) = Product (xs:ys)
 multiply expression (Constant a) = multiply (Constant a) expression
 multiply (Negate a) (Negate b) = multiply a b
 multiply (Negate a) expression = Product [Negate a, expression]
-multiply expression1 expression2 = Product [expression1, expression2] 
-
--- collapsing --
-
-collapseSum :: Expression -> Expression
-collapseSum (Sum xs) = foldl add (Constant 0) xs
-collapseSum xs = xs
-
-collapseProduct :: Expression -> Expression
-collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
-collapseProduct xs = xs
+multiply expression1 expression2 = Product [expression1, expression2]
 
 evaluate :: Expression -> Double
 evaluate (Constant value)             = value
