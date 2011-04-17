@@ -25,7 +25,7 @@ printBetween str xs = print $ join str (List.map show xs)
 
 --- Exprs, a data type for containing simple binary expressions (for easy parsing)
 
-data Expr = Var String | Const Double | Uno Unop (Expr) | Duo Duop (Expr) (Expr) | Seq [Expr]
+data Expr = Var String | Const Double | In Integer | Uno Unop (Expr) | Duo Duop (Expr) (Expr) | Seq [Expr]
     deriving Show
 data Unop = Neg | Abs deriving Show
 data Duop = Mult | Div | Add | Sub | Log | Pow deriving Show
@@ -44,6 +44,7 @@ table = [ [Prefix (m_reservedOp "-" >> return (Uno Neg))]
         
 term = m_parens exprparser
        <|> liftM Var m_identifier
+       <|> liftM In (m_natural)
        <|> liftM Const m_float
        <|> do {
                 char '|'
@@ -73,6 +74,7 @@ def = emptyDef{ commentStart = "{-"
 TokenParser{ parens = m_parens
            , identifier = m_identifier
            , float = m_float
+           , natural = m_natural
            , reservedOp = m_reservedOp
            , reserved = m_reserved
            , semiSep1 = m_semiSep1
@@ -81,6 +83,7 @@ TokenParser{ parens = m_parens
 --- Expressions
 
 data Expression = Constant Double
+                | Integ Double
                 | Absolute (Expression)
                 | Negate (Expression)
                 | Sum [Expression]
@@ -105,6 +108,7 @@ showExpression expression = showExpression' expression
 
 showExpression' :: Expression -> String
 showExpression' (Constant a) = show a
+showExpression' (Integ a) = show a
 showExpression' (Negate a) = "-" ++ showExpression' a
 showExpression' (Absolute a) = around (showExpression a) "|" "|"
 showExpression' (Power a b) = showExpression' a ++ "^" ++ showExpression' b
@@ -115,6 +119,7 @@ showExpression' expression = parenthesize $ showExpression expression
 
 exprToExpression :: Expr -> Expression
 exprToExpression (Const x) = Constant x
+exprToExpression (In x) = Integ (fromInteger x :: Double)
 exprToExpression (Uno Neg x) = Negate (exprToExpression x)
 exprToExpression (Uno Abs x) = Absolute (exprToExpression x)
 exprToExpression (Duo Pow x y) = Power (exprToExpression x) (exprToExpression y)
@@ -126,7 +131,7 @@ exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpressio
 
 solveExpression :: String -> IO ()
 solveExpression inp = case parse exprparser "" inp of
-             { Left err -> print "Not a legitimate Expression"
+             { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
              ; Right ans -> putStrLn . show . solve $ (exprToExpression ans)
              }
   
@@ -154,6 +159,7 @@ transformations = [absolutify, multiplyByZero, multiplyByOne, distribute,
                           
 expressionSize :: Expression -> Integer
 expressionSize (Constant x) = 1
+expressionSize (Integ x) = 1
 expressionSize (Negate x) = expressionSize x
 expressionSize (Absolute x) = 1 + expressionSize x
 expressionSize (Sum xs) = foldl (+) 1 $ List.map expressionSize xs
@@ -165,7 +171,9 @@ expressionSize (Logarithm x y) = 1 + expressionSize x + expressionSize y
 
 solved :: Expression -> Bool
 solved (Constant x) = True
+solved (Integ x) = True
 solved (Negate (Constant x)) = True
+solved (Negate (Integ x)) = True
 solved x = False
                                 
 expand :: Expression -> [Expression]
@@ -217,14 +225,21 @@ absolutify expression = expression
 
 logify :: Expression -> Expression
 logify (Logarithm (Constant x) (Constant y)) = Constant (logBase x y)
+logify (Logarithm (Integ x) (Integ y)) = Constant (logBase x y)
+logify (Logarithm (Integ x) (Constant y)) = Constant (logBase x y)
+logify (Logarithm (Constant x) (Integ y)) = Constant (logBase x y)
 logify expression = expression
 
 exponentiate :: Expression -> Expression
 exponentiate (Power (Constant x) (Constant y)) = Constant (x ** y)
+exponentiate (Power (Integ x) (Integ y)) = Constant (x ** y)
+exponentiate (Power (Constant x) (Integ y)) = Constant (x ** y)
+exponentiate (Power (Integ x) (Constant y)) = Constant (x ** y)
 exponentiate expression = expression
 
 negatify :: Expression -> Expression
 negatify (Negate (Constant x)) = (Constant (0-x))
+negatify (Negate (Integ x)) = (Integ (0-x))
 negatify x = x
 
 distribute :: Expression -> Expression
@@ -269,23 +284,34 @@ collapseProduct xs = xs
 
 add :: Expression -> Expression -> Expression
 add (Constant a) (Constant b) = Constant (a + b)
+add (Integ a) (Integ b) = Integ (a + b)
+add (Constant a) (Integ b) = Constant (a + b)
+add (Integ a) (Constant b) = Constant (a + b)
 add (Sum xs) expression = Sum (expression:xs)
 add expression (Sum xs) = Sum (expression:xs)
 add (Constant a) expression = Sum ((Constant a):[expression])
 add expression (Constant a) = Sum ((Constant a):[expression])
+add (Integ a) expression = Sum ((Integ a):[expression])
+add expression (Integ a) = Sum ((Integ a):[expression])
 add expression1 expression2 = Sum [expression1, expression2]
 
 myNegate :: Expression -> Expression
 myNegate (Constant num) = Constant (-(num))
+myNegate (Integ num) = Integ (-(num))
 myNegate (Negate expression) = expression
 myNegate expression = Negate expression
 
 multiply :: Expression -> Expression -> Expression
 multiply (Constant a) (Constant b) = Constant (a * b)
+multiply (Integ a) (Constant b) = Constant (a * b)
+multiply (Constant a) (Integ b) = Constant (a * b)
+multiply (Integ a) (Integ b) = Integ (a * b)
 multiply (Constant a) expression = Product [Constant a, expression]
+multiply (Integ a) expression = Product [Integ a, expression]
 multiply (Product xs) ys = Product (xs ++ [ys])
 multiply xs (Product ys) = Product (xs:ys)
 multiply expression (Constant a) = multiply (Constant a) expression
+multiply expression (Integ a) = multiply (Integ a) expression
 multiply (Negate a) (Negate b) = multiply a b
 multiply (Negate a) expression = Product [Negate a, expression]
 multiply expression1 expression2 = Product [expression1, expression2]
@@ -294,6 +320,7 @@ multiply expression1 expression2 = Product [expression1, expression2]
 
 evaluate :: Expression -> Double
 evaluate (Constant value)             = value
+evaluate (Integ value)                = value
 evaluate (Absolute value)             = abs (evaluate value)
 evaluate (Negate expression)          = -(evaluate expression)
 evaluate (Sum expressions)            = foldr ((+) . evaluate) 0 expressions
