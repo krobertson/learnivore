@@ -317,11 +317,11 @@ multiply expression1 expression2 = Product [expression1, expression2]
 
 collapseSum :: Expression -> Expression
 collapseSum (Sum xs) = foldl add (Constant 0) xs
-collapseSum xs = emap collapseSum xs
+collapseSum xs = xs
 
 collapseProduct :: Expression -> Expression
 collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
-collapseProduct xs = emap collapseProduct xs
+collapseProduct xs = xs
 
 evaluate :: Expression -> Double
 evaluate (Constant value)             = value

@@ -5,14 +5,14 @@ flatten is a collapse step followed by a simplification
 
 future plans:
 -------------
-rewrite solve as a bfs over a set of transformations (Expression -> (Solution, pathToSolution))
+include all log and power equivalencies, add all the trigonometric functions, e, and i
 
-write an arithmetic expression generator as a bfw, reusing the transformations, an adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
+add derivatives, integrals, equations, logic, higher maths
+
+write an arithmetic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
 install snap framework
-  - expose as a json api
+  - expose as a json / html api
     - solve expression (expression -> (expression, pathToSolution))
     - generate complex expression (expression, pathToSolution, solution, generators)
     - verify solution (expression -> solution)
-
-
