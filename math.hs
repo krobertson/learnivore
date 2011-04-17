@@ -95,16 +95,6 @@ data Expression = Constant Double
 instance Show Expression where
   show = showExpression
 
-emap :: (Expression -> Expression) -> Expression -> Expression
-emap fn (Constant x) = (Constant x)
-emap fn (Absolute x) = Absolute (emap fn x)
-emap fn (Negate x) = Negate (emap fn x)
-emap fn (Sum xs) = Sum (map (emap fn) xs)
-emap fn (Subtract xs) = Subtract (map (emap fn) xs)
-emap fn (Product xs) = Product (map (emap fn) xs)
-emap fn (Divide xs) = Divide (map (emap fn) xs)
-emap fn (Power x y) = Power (emap fn x) (emap fn y)
-emap fn (Logarithm x y) = Logarithm (emap fn x) (emap fn y)
 -- displaying an expression to the end user
 
 showExpression :: Expression -> String
@@ -159,32 +149,45 @@ solved (Constant x) = True
 solved (Negate (Constant x)) = True
 solved x = False
 
-transformations = [absolutify, logify, 
-                   multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseProduct, squash, sortExpression]
+transformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
+                   collapseSum, collapseProduct, squash, 
+                   logify, exponentiate, sortExpression]
 
 solutionTree :: Expression -> Tree Expression
 solutionTree expression = Node expression (map (solutionTree . rootLabel) $ expand expression)
 
 expand :: Expression -> Forest Expression
-expand = twiddle transformations
+expand = twiddle $ map exmap transformations
 
 twiddle :: [Expression -> Expression] -> Expression -> Forest Expression
 twiddle transforms expression = if (not . solved $ expression) 
                                 then filter (\x -> not (rootLabel x == expression)) $
                                   map (\x -> Node (x expression) []) transforms
                                 else []
-                                
+                  
+exmap :: (Expression -> Expression) -> Expression -> Expression
+exmap fn (Sum xs) = fn $ Sum (map (exmap fn) xs)
+exmap fn (Subtract xs) = fn $ Subtract (map (exmap fn) xs)
+exmap fn (Product xs) = fn $ Product (map (exmap fn) xs)
+exmap fn (Divide xs) = fn $ Divide (map (exmap fn) xs)
+exmap fn (Power x y) = fn $ Power (exmap fn x) (exmap fn y)
+exmap fn (Logarithm x y) = fn $ Logarithm (exmap fn x) (exmap fn y)
+exmap fn (Absolute x) = fn $ Absolute (exmap fn x)
+exmap fn (Negate y) = fn $ Negate (exmap fn y)
+exmap fn z = fn z
+              
+
 -- transformations
+
 sortExpression :: Expression -> Expression
-sortExpression (Sum xs) = Sum (sort (map (emap sortExpression) xs))
-sortExpression (Subtract xs) = Subtract (map (emap sortExpression) xs)
-sortExpression (Product xs) = Product (sort (map (emap sortExpression) xs))
-sortExpression (Divide xs) = Divide (map (emap sortExpression) xs)
-sortExpression (Power x y) = Power (emap sortExpression x) (emap sortExpression y)
-sortExpression (Logarithm x y) = Logarithm (emap sortExpression x) (emap sortExpression y)
-sortExpression (Absolute x) = Absolute (emap sortExpression x)
-sortExpression (Negate y) = Negate (emap sortExpression y)
+sortExpression (Sum xs) = Sum (sort xs)
+sortExpression (Subtract xs) = Subtract xs
+sortExpression (Product xs) = Product (sort xs)
+sortExpression (Divide xs) = Divide xs
+sortExpression (Power x y) = Power x y
+sortExpression (Logarithm x y) = Logarithm x y
+sortExpression (Absolute x) = Absolute x
+sortExpression (Negate y) = Negate y
 sortExpression z = z
 
 multiplyByZero :: Expression -> Expression
@@ -203,6 +206,10 @@ absolutify expression = expression
 logify :: Expression -> Expression
 logify (Logarithm (Constant x) (Constant y)) = Constant (logBase x y)
 logify expression = expression
+
+exponentiate :: Expression -> Expression
+exponentiate (Power (Constant x) (Constant y)) = Constant (x ** y)
+exponentiate expression = expression
 
 distribute :: Expression -> Expression
 distribute (Product (x:[])) = x
@@ -307,8 +314,11 @@ evaluate (Constant value)             = value
 evaluate (Absolute value)             = abs (evaluate value)
 evaluate (Negate expression)          = -(evaluate expression)
 evaluate (Sum expressions)            = foldr ((+) . evaluate) 0 expressions
+evaluate (Subtract expressions)       = foldl (\x y -> x - (evaluate y)) (evaluate . head $ expressions) (tail expressions)
 evaluate (Product expressions)        = foldr ((*) . evaluate) 1 expressions
+evaluate (Divide expressions)         = foldl (\x y -> x / (evaluate y)) (evaluate . head $ expressions) (tail expressions)
 evaluate (Logarithm base expression)  = logBase (evaluate base) (evaluate expression)
+evaluate (Power base expo)            = (evaluate base) ** (evaluate expo)
 
 
 -- equations
