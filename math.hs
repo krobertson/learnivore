@@ -126,9 +126,10 @@ exprToExpression (Duo Add x y) = Sum [(exprToExpression x), (exprToExpression y)
 exprToExpression (Duo Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
 exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
 
-printExpression inp = case parse exprparser "" inp of
-             { Left err -> return (Constant 0)
-             ; Right ans -> return (exprToExpression $ ans)
+solveExpression :: String -> IO ()
+solveExpression inp = case parse exprparser "" inp of
+             { Left err -> print "Not a legitimate Expression"
+             ; Right ans -> putStrLn . show . solve $ (exprToExpression ans)
              }
   
 data Solution = Solution (Maybe [Expression]) 
