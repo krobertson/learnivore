@@ -56,9 +56,7 @@ term = m_parens exprparser
               ; char '<'
               ; x <- exprparser
               ; char '>'
-              ; char '('
               ; y <- m_parens exprparser
-              ; char ')'
               ; return (Duo Log x y)
               }
 
