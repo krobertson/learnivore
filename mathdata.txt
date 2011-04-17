@@ -15,3 +15,4 @@ let prd1 = (Product [Constant 2.0, (Product [Constant 2, Constant 2, Logarithm (
 let prd2 = (Product [sm, prd, dst, lg, neg, ab1, ab2, sm1, prd1])
 let prd3 = (Product [prd1, prd2])
 let prd4 = (Product [prd1, prd2, prd3])
+let x = Variable "x"

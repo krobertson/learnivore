@@ -246,6 +246,12 @@ solveExpression inp = case parse exprparser "" inp of
              { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
              ; Right ans -> putStrLn . show . solve $ (exprToExpression ans)
              }
+             
+printExpression :: String -> IO ()
+printExpression inp = case parse exprparser "" inp of
+             { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
+             ; Right ans -> putStrLn . show $ (exprToExpression ans)
+             }
   
 
 -- transformations
