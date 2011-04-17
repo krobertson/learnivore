@@ -147,43 +147,21 @@ showSolution (Solution xs) = join "\n=>\n" (map show xs)
 
 instance Show Solution where
   show = showSolution
-
-bft :: Tree a -> [a]
-bft t = map rootLabel $
-      concat $
-      takeWhile (not . null) $               
-      iterate (concatMap subForest) [t]
-
-generatePath :: [Expression] -> [Expression]
-generatePath expressions = foldl takeIfAncestor [(head xs)] (tail xs)
-                            where xs = reverse expressions
-                                                    
-takeIfAncestor :: [Expression] -> Expression -> [Expression]
-takeIfAncestor path expression
-            | (head path) `elem` (map rootLabel $ expand expression) = expression:path
-            | otherwise = path
-
-takeThrough :: (a -> Bool) -> [a] -> [a]
-takeThrough fn xs = (takeWhile fn xs) ++ [(head (dropWhile fn xs))]
-
+  
 solve :: Expression -> Solution
 solve expression = Solution solutionPath
                     where solutionPath = generatePath . bfs $ expression
-                                         
-bfs :: Expression -> [Expression]
-bfs expression = takeThrough (not . solved) $ bft . solutionTree $ expression
 
-collapse :: Expression -> Expression
-collapse expression = head $ dropWhile (not . solved) $ 
-                      bft . solutionTree $ expression 
-                 
+-- solve helper functions
+
 solved :: Expression -> Bool
 solved (Constant x) = True
 solved (Negate (Constant x)) = True
 solved x = False
-  
-printSolution :: Solution -> IO ()
-printSolution = putStrLn . showSolution
+
+transformations = [absolutify, logify, 
+                   multiplyByZero, multiplyByOne, distribute, 
+                   collapseSum, collapseProduct, squash, sortExpression]
 
 solutionTree :: Expression -> Tree Expression
 solutionTree expression = Node expression (map (solutionTree . rootLabel) $ expand expression)
@@ -196,12 +174,7 @@ twiddle transforms expression = if (not . solved $ expression)
                                 then filter (\x -> not (rootLabel x == expression)) $
                                   map (\x -> Node (x expression) []) transforms
                                 else []
-                                    
-
-transformations = [absolutify, logify, 
-                   multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseProduct, squash, sortExpression]
-
+                                
 -- transformations
 sortExpression :: Expression -> Expression
 sortExpression (Sum xs) = Sum (sort (map (emap sortExpression) xs))
@@ -262,14 +235,35 @@ squashProduct x = x
 squashSubtract = undefined
 squashDivide = undefined
 
--- multiplicationTransformations = [multiplyOne, multiplyZero, distributeMult, concentratePower]
--- divideTransformations = [toMult]
--- sumTransformations = [addZero, concentrateMult, concentrateLog]
--- subtractTransformations = []
--- logTransformations = [splitMult]
--- powerTransformations = []
--- absoluteTransformations = []
--- negativeTransformations = [doubleInversion]
+-- helpers
+
+bft :: Tree a -> [a]
+bft t = map rootLabel $
+      concat $
+      takeWhile (not . null) $               
+      iterate (concatMap subForest) [t]
+
+generatePath :: [Expression] -> [Expression]
+generatePath expressions = foldl takeIfAncestor [(head xs)] (tail xs)
+                            where xs = reverse expressions
+                                                    
+takeIfAncestor :: [Expression] -> Expression -> [Expression]
+takeIfAncestor path expression
+            | (head path) `elem` (map rootLabel $ expand expression) = expression:path
+            | otherwise = path
+
+takeThrough :: (a -> Bool) -> [a] -> [a]
+takeThrough fn xs = (takeWhile fn xs) ++ [(head (dropWhile fn xs))]
+                                         
+bfs :: Expression -> [Expression]
+bfs expression = takeThrough (not . solved) $ bft . solutionTree $ expression
+
+collapse :: Expression -> Expression
+collapse expression = head $ dropWhile (not . solved) $ 
+                      bft . solutionTree $ expression 
+
+printSolution :: Solution -> IO ()
+printSolution = putStrLn . showSolution
 
 -- merging
 fix :: (a -> a) -> a
