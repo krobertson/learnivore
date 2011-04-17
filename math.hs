@@ -155,9 +155,7 @@ expressionSize _ = 1
 
 solved :: Expression -> Bool
 solved (Absolute x) = varSolved x
-solved x 
-     | (solved x) || (varSolved x) = True
-     | otherwise = False
+solved x = (solved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
 varSolved (Variable _) = True
@@ -213,7 +211,7 @@ listOfVariables (Power x y) = nub . concatMap listOfVariables $ x:y:[]
 listOfVariables _ = []
 
 expand :: Expression -> [Expression]
-expand = twiddle $ List.map exmap transformations
+expand x = twiddle (List.map exmap transformations) x
 
 expressionGraph :: Expression -> Set Expression                          
 expressionGraph = fromList . expand
@@ -238,7 +236,13 @@ exmap fn z = fn z
 solve :: Expression -> Solution
 solve expression = Solution (case solutionPath of (Just path) -> Just (expression:path)
                                                   Nothing -> Nothing)
-                     where solutionPath = if solved expression then Just [expression] else aStar expressionGraph (\x y -> (abs $ (expressionSize x) - (expressionSize y)) +  1) expressionSize solved expression        
+                     where solutionPath = if solved expression 
+                                          then Just [expression] 
+                                          else aStar expressionGraph 
+                                                     (\x y -> (abs $ (expressionSize x) - (expressionSize y)) +  1) 
+                                                     expressionSize 
+                                                     solved 
+                                                     expression
 
 
 solveExpression :: String -> IO ()
