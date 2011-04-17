@@ -173,29 +173,38 @@ takeThrough :: (a -> Bool) -> [a] -> [a]
 takeThrough fn xs = (takeWhile fn xs) ++ [(head (dropWhile fn xs))]
 
 solve :: Expression -> Solution
-solve expression = Solution (takeThrough (not . solved ) (bft . transform $ expression))
+solve expression = Solution solutionPath
+                    where solutionPath = takeThrough (not . solved) $ 
+                                         bft . solutionTree $ expression
 
 collapse :: Expression -> Expression
-collapse expression = head $ dropWhile (not . solved) (bft . transform $ expression)
+collapse expression = head $ dropWhile (not . solved) $ 
+                      bft . solutionTree $ expression 
                  
 solved :: Expression -> Bool
 solved (Constant x) = True
+solved (Negate (Constant x)) = True
 solved x = False
   
 printSolution :: Solution -> IO ()
 printSolution = putStrLn . showSolution
 
-transform :: Expression -> Tree Expression
-transform expression = Node expression (map (\x -> transform . rootLabel $ x) (twiddle expression transformations))
+solutionTree :: Expression -> Tree Expression
+solutionTree expression = Node expression (map (solutionTree . rootLabel) $ expand expression)
 
-twiddle :: Expression -> [Expression -> Expression] -> Forest Expression
-twiddle expression transforms = if (not . solved $ expression) 
+expand :: Expression -> Forest Expression
+expand = twiddle transformations
+
+twiddle :: [Expression -> Expression] -> Expression -> Forest Expression
+twiddle transforms expression = if (not . solved $ expression) 
                                 then filter (\x -> not (rootLabel x == expression)) $
                                   map (\x -> Node (x expression) []) transforms
                                 else []
                                     
 
-transformations = [absolutify, multiplyByZero, multiplyByOne, collapseSum, collapseProduct, (emap collapseSum), (emap collapseProduct), (emap sortExpression), logify, squash]-- [sortExpression] ++ multiplicationTransformations splitLog
+transformations = [squash, absolutify, logify, 
+                   multiplyByZero, multiplyByOne, distribute, 
+                   collapseSum, collapseProduct, (emap sortExpression)]
 
 -- transformations
 sortExpression :: Expression -> Expression
@@ -210,11 +219,11 @@ sortExpression (Negate y) = Negate (sortExpression y)
 sortExpression z = z
 
 multiplyByZero :: Expression -> Expression
-multiplyByZero (Product xs) = if any (\x -> x == Constant 0.0) xs then Constant 0.0 else (Product (map (emap multiplyByZero) xs))
+multiplyByZero (Product xs) = if any (\x -> x == Constant 0.0) xs then Constant 0.0 else (Product (map multiplyByZero xs))
 multiplyByZero xs = xs
 
 multiplyByOne :: Expression -> Expression
-multiplyByOne (Product xs) = Product (filter (\x -> not (x == Constant 1.0)) (map (emap multiplyByOne) xs))
+multiplyByOne (Product xs) = Product (filter (\x -> not (x == Constant 1.0)) (map multiplyByOne xs))
 multiplyByOne xs = xs
 
 absolutify :: Expression -> Expression
@@ -226,9 +235,11 @@ logify :: Expression -> Expression
 logify (Logarithm (Constant x) (Constant y)) = Constant (logBase x y)
 logify expression = expression
 
-distributeMultiplicationOverSum :: Expression -> Expression
-distributeMultiplicationOverSum (Product ((Sum xs):y:zs)) = Sum (map (\x -> (Product (x:(y:zs)))) xs)
-distributeMultiplicationOverSum (Product (x:(Sum ys):zs)) = Sum (map (\y -> (Product (y:(x:zs)))) ys)
+distribute :: Expression -> Expression
+distribute (Product (x:[])) = x
+distribute (Product ((Sum xs):ys)) = Sum (map (\x -> Product (x:ys)) xs)
+distribute (Product (x:(Sum ys):zs)) = Sum (map (\y -> Product (x:(y:zs))) ys)
+distribute x = x
 
 squash :: Expression -> Expression
 squash (Sum xs) = squashSum (Sum (map squash xs))
@@ -289,42 +300,7 @@ multiply xs (Product ys) = Product (xs:ys)
 multiply expression (Constant a) = multiply (Constant a) expression
 multiply (Negate a) (Negate b) = multiply a b
 multiply (Negate a) expression = Product [Negate a, expression]
-multiply expression1 expression2 = Product [expression1, expression2]
-
-distribute :: Expression -> Expression
-distribute _ = undefined
-
--- simplifications --
-simplify :: Expression -> Expression
-simplify (Sum xs) = simplifySum (Sum (simplifyAll xs))
-simplify (Subtract xs) = (Subtract (simplifyAll xs))
-simplify (Product xs) = simplifyProduct (Product (simplifyAll xs))
-simplify (Divide xs) = (Divide (simplifyAll xs))
-simplify (Logarithm base (Product (xs))) = Sum (map (\x -> (Logarithm (simplify base) (simplify x))) (simplifyAll xs))
-simplify (Power base expo) = Power (simplify base) (simplify expo)
-simplify (Constant a) = Constant a
-simplify (Negate (Negate xs)) = simplify xs
-simplify (Absolute (Negate xs)) = simplify xs
-simplify (Absolute (Constant x)) = Constant x
-simplify x = x
-
-simplifyAll :: [Expression] -> [Expression]
-simplifyAll = map (\x -> (simplify x))
-
-simplifySum :: Expression -> Expression
-simplifySum (Sum []) = (Constant 0)
-simplifySum (Sum (x:[])) = (simplify x)-- 
--- simplifySum (Sum ((Constant 0):xs)) = simplifySum (Sum xs)
--- simplifySum (Sum (x:(Constant 0):xs)) = simplifySum (Sum (x:xs))
-simplifySum (Sum ((Sum xs):ys)) = simplifySum (Sum (xs ++ ys))
-simplifySum (Sum (x:(Sum ys):zs)) = simplifySum (Sum (x:(ys++zs)))
-simplifySum (Sum xs) = Sum xs
-
-simplifyProduct :: Expression -> Expression
-simplifyProduct (Product (x:[])) = (simplify x)
-simplifyProduct (Product ((Product xs):ys)) = simplify (Product (xs ++ ys))
-simplifyProduct (Product (x:(Product ys):zs)) = simplify (Product (x:(ys ++ zs)))
-simplifyProduct (Product xs) = (Product (simplifyAll xs))
+multiply expression1 expression2 = Product [expression1, expression2] 
 
 -- collapsing --
 
@@ -336,30 +312,6 @@ collapseProduct :: Expression -> Expression
 collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
 collapseProduct xs = emap collapseProduct xs
 
--- collapse :: Expression -> Expression
--- collapse (Sum xs) = collapseSum (simplify (Sum (answerAll xs)))
--- collapse (Product xs) = collapseProduct (simplify (Product (answerAll xs)))
--- collapse (Logarithm (Constant base) (Constant expr)) = Constant (logBase base expr)
--- collapse (Logarithm base expr) = (Logarithm (answer base) (answer expr))
--- collapse (Absolute expr) = (Absolute (answer expr))
--- collapse (Negate expr) = (Negate (answer expr))
--- collapse x = x 
--- 
-collapseAll :: [Expression] -> [Expression]
-collapseAll = map (\x -> collapse x)
-
-answer :: Expression -> Expression
-answer = simplify . collapse
-
-answerAll :: [Expression] -> [Expression]
-answerAll =  simplifyAll . collapseAll
-
--- solve :: Expression -> Expression
--- solve x 
---   | (answer x) == (answer . answer $ x) = (answer x)
---   | otherwise = solve (answer x) 
--- evaluation --
-
 evaluate :: Expression -> Double
 evaluate (Constant value)             = value
 evaluate (Absolute value)             = abs (evaluate value)
@@ -368,9 +320,6 @@ evaluate (Sum expressions)            = foldr ((+) . evaluate) 0 expressions
 evaluate (Product expressions)        = foldr ((*) . evaluate) 1 expressions
 evaluate (Logarithm base expression)  = logBase (evaluate base) (evaluate expression)
 
--- rotations
-
--- expansions
 
 -- equations
 
