@@ -181,9 +181,9 @@ exmap fn z = fn z
 
 sortExpression :: Expression -> Expression
 sortExpression (Sum xs) = Sum (sort xs)
-sortExpression (Subtract xs) = Subtract xs
+sortExpression (Subtract (x:xs)) = Subtract (x:(sort xs))
 sortExpression (Product xs) = Product (sort xs)
-sortExpression (Divide xs) = Divide xs
+sortExpression (Divide (x:xs)) = Divide (x:(sort xs))
 sortExpression (Power x y) = Power x y
 sortExpression (Logarithm x y) = Logarithm x y
 sortExpression (Absolute x) = Absolute x
