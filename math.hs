@@ -101,7 +101,7 @@ instance Show Expression where
 data Eqn = Eqn Expr Expr
 
 eqnparser = do { x <- exprparser
-               ; char '='
+               ; try (string "=") <|> string " = "
                ; y <- exprparser
                ; return (Eqn x y)}
                
@@ -458,7 +458,7 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                      List.map ($ equation) transforms
                                 else []
 
-eqTransformations = [isolateVarByMult, isolateVarBySum] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
+eqTransformations = [splitProduct, splitSum, isolateVarByMult, isolateVarBySum] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
 
 
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) transformations
@@ -470,11 +470,21 @@ equationSize (Equation lhs rhs) = expressionSize lhs + expressionSize rhs
 isolateVarByMult :: Equation -> Equation
 isolateVarByMult (Equation (Product xs) rhs) = case sort xs of (Variable str):xs -> Equation (Variable str) (Divide (rhs:[Product xs]))
                                                                _ -> Equation (Product xs) rhs
-isolateVarByMult (Equation lhs rhs) = Equation lhs rhs
+isolateVarByMult equation = equation
 
 isolateVarBySum :: Equation -> Equation
-isolateVarBySum (Equation (Sum ((Variable str):xs)) rhs) = Equation (Variable str) (Subtract (rhs:[Sum xs]))  
-isolateVarBySum (Equation lhs rhs) = Equation lhs rhs
+isolateVarBySum (Equation (Sum ((Variable str):xs)) rhs) = Equation (Variable str) (Subtract (rhs:[Sum xs]))
+isolateVarBySum equation = equation
+
+splitProduct :: Equation -> Equation
+splitProduct (Equation (Product (x:xs)) rhs) = Equation x (Divide (rhs:xs))
+splitProduct (Equation lhs (Product (x:xs))) = Equation (Divide (lhs:xs)) x
+splitProduct equation = equation
+
+splitSum :: Equation -> Equation
+splitSum (Equation (Sum (x:xs)) rhs) = Equation x (Subtract (rhs:xs))
+splitSum (Equation lhs (Sum (x:xs))) = Equation (Subtract (lhs:xs)) x
+splitSum equation = equation
 
 solveEquation :: String -> IO ()
 solveEquation inp = case parse eqnparser "" inp of
