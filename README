@@ -1,5 +1,5 @@
-from ghci, use solveExpression to simplify algebraic expressions from strings
-from ghci, use solveEquation to solve algebraic equations from strings
+from ghci, use solveExpression to simplify arithmetic and algebraic expressions from strings
+from ghci, use solveEquation to solve arithmetic and algebraic equations from strings
 
 future plans:
 -------------
