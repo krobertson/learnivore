@@ -83,9 +83,9 @@ TokenParser{ parens = m_parens
 
 --- Expressions
 
-data Expression = Constant Double
+data Expression = Variable String -- Product [(Variable "x"), (Integ 2)] = 2x
+                | Constant Double
                 | Integ Double
-                | Variable String -- Product [(Variable "x"), (Integ 2)] = 2x
                 | Absolute (Expression)
                 | Negate (Expression)
                 | Sum [Expression]
@@ -158,7 +158,7 @@ solved (Absolute x) = varSolved x
 solved x = (constSolved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
-varSolved (Variable _) = True
+varSolved (Variable x) = singleVariable (Variable x)
 varSolved (Negate (Variable _)) = True
 varSolved (Product [(Variable _), (Constant _)]) = True
 varSolved (Product [(Constant _), (Variable _)]) = True
@@ -194,6 +194,10 @@ constSolved :: Expression -> Bool
 constSolved (Constant _) = True
 constSolved (Integ _) = True
 constSolved _ = False
+
+singleVariable :: Expression -> Bool
+singleVariable (Variable _) = True
+singleVariable _ = False
 
 numberOfVariables :: Expression -> Int
 numberOfVariables expression = length . listOfVariables $ expression
@@ -332,8 +336,8 @@ squashProduct (Product ((Product xs):ys)) = Product (xs ++ ys)
 squashProduct (Product (x:(Product xs):ys)) = Product (x:xs ++ ys)
 squashProduct x = x
 
-squashSubtract = undefined
-squashDivide = undefined
+squashSubtract x = x
+squashDivide x = x
 
 collapseSum :: Expression -> Expression
 collapseSum (Sum xs) = foldl add (Constant 0) xs
@@ -403,10 +407,65 @@ evaluate (Variable str) = error "Cannot evaluate a variable"
 data Equation = Equation {
   lhs :: Expression,
   rhs :: Expression
-}
+} deriving (Eq, Ord)
+
+data SolvedEquation = SolvedEquation (Maybe [Equation])
 
 instance (Show (Equation)) where
   show (Equation expr1 expr2) = (show expr1) ++ " = " ++ (show expr2)
+  
+showSolvedEquation :: SolvedEquation -> String
+showSolvedEquation (SolvedEquation (Just xs)) = join "\n=>\n" (List.map show xs)
+showSolvedEquation (SolvedEquation Nothing) = "There is no valid solution"
+
+instance Show SolvedEquation where
+  show = showSolvedEquation
+
+solveEq :: Equation -> SolvedEquation
+solveEq equation = SolvedEquation (case solutionPath of (Just path) -> Just (equation:path)
+                                                        Nothing -> Nothing)
+                     where solutionPath = if solvedEq equation 
+                                          then Just [equation] 
+                                          else aStar equationGraph 
+                                                     (\x y -> 1) 
+                                                     equationSize 
+                                                     solvedEq 
+                                                     equation
+                                                     
+solvedEq :: Equation -> Bool
+solvedEq (Equation lhs rhs)
+        | (singleVariable lhs) && (constSolved rhs) = True
+        | otherwise = False
+        
+equationGraph :: Equation -> Set Equation
+equationGraph = fromList . expandEq
+
+expandEq :: Equation -> [Equation]
+expandEq = twiddleEq eqTransformations
+
+twiddleEq :: [Equation -> Equation] -> Equation -> [Equation]
+twiddleEq transforms equation = if (not . solvedEq $ equation) 
+                                then List.filter (not . (== equation)) $
+                                     List.map ($ equation) transforms
+                                else []
+
+eqTransformations = [isolateVarByMult, isolateVarBySum] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
+
+
+lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) transformations
+rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (exmap fn rhs)) transformations
+
+equationSize :: Equation -> Integer
+equationSize (Equation lhs rhs) = expressionSize lhs + expressionSize rhs
+
+isolateVarByMult :: Equation -> Equation
+isolateVarByMult (Equation (Product xs) rhs) = case sort xs of (Variable str):xs -> Equation (Variable str) (Divide (rhs:[Product xs]))
+                                                               _ -> Equation (Product xs) rhs
+isolateVarByMult (Equation lhs rhs) = Equation lhs rhs
+
+isolateVarBySum :: Equation -> Equation
+isolateVarBySum (Equation (Sum ((Variable str):xs)) rhs) = Equation (Variable str) (Subtract (rhs:[Sum xs]))  
+isolateVarBySum (Equation lhs rhs) = Equation lhs rhs
 
 valid :: Equation -> Bool
 valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)
