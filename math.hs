@@ -43,6 +43,14 @@ table = [ [Prefix (m_reservedOp "-" >> return (Uno Neg))]
         ]
         
 term = m_parens exprparser
+       <|> do {
+                string "log"
+              ; char '<'
+              ; x <- exprparser
+              ; char '>'
+              ; y <- m_parens exprparser
+              ; return (Duo Log x y)
+              }
        <|> liftM Var m_identifier
        <|> liftM In (m_natural)
        <|> liftM Const m_float
@@ -52,14 +60,7 @@ term = m_parens exprparser
               ; char '|'
               ; return (Uno Abs x)
               }
-       <|> do {
-                string "log"
-              ; char '<'
-              ; x <- exprparser
-              ; char '>'
-              ; y <- m_parens exprparser
-              ; return (Duo Log x y)
-              }
+       
 
 def = emptyDef{ commentStart = "{-"
               , commentEnd = "-}"

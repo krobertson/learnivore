@@ -1,3 +1,4 @@
+let two = Constant 2.0
 let neg = (Negate (Constant 2.0))
 let ab1 = (Absolute (Constant 2.0)) 
 let sm = (Sum [Constant 1.0, Constant 2.0]) 
@@ -16,3 +17,4 @@ let prd2 = (Product [sm, prd, dst, lg, neg, ab1, ab2, sm1, prd1])
 let prd3 = (Product [prd1, prd2])
 let prd4 = (Product [prd1, prd2, prd3])
 let x = Variable "x"
+let x2 = (Product [x, two])
