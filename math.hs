@@ -556,4 +556,6 @@ printEquation inp = case parse eqnparser "" inp of
              }
 
 valid :: Equation -> Bool
+valid (Equation (Variable _) (Constant _)) = True
+valid (Equation (Variable _) (Integ _)) = True
 valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)
