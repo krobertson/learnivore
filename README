@@ -3,15 +3,13 @@ from ghci, use solveEquation to solve algebraic equations from strings
 
 future plans:
 -------------
-algebraic equation solving
+include all log and power equivalencies, add all the trigonometric functions, e, i, and functions on complex numbers
 
 systems of equations
 
-include all log and power equivalencies, add all the trigonometric functions, e, i, and functions on complex numbers
+derivatives, integrals, equations, logic, higher maths
 
-add derivatives, integrals, equations, logic, higher maths
-
-write an arithmetic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
+write an algebraic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
 install snap framework
   - expose as a json / html api
