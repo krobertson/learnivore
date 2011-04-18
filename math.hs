@@ -355,8 +355,16 @@ collapseProduct :: Expression -> Expression
 collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
 collapseProduct xs = xs
 
+collapseDivide :: Expression -> Expression
+collapseDivide (Divide (x:xs)) = foldl divide x xs
+collapseDivide xs = xs
+
+collapseSubtract :: Expression -> Expression
+collapseSubtract (Subtract (x:xs)) = foldl sub x xs
+collapseSubtract xs = xs
+
 transformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseProduct, squash, --collapseVariables,
+                   collapseSum, collapseSubtract, collapseProduct, collapseDivide, squash, --collapseVariables,
                    logify, exponentiate, negatify, sortExpression]
 -- merging
 
@@ -372,6 +380,19 @@ add expression (Constant a) = Sum ((Constant a):[expression])
 add (Integ a) expression = Sum ((Integ a):[expression])
 add expression (Integ a) = Sum ((Integ a):[expression])
 add expression1 expression2 = Sum [expression1, expression2]
+
+sub :: Expression -> Expression -> Expression
+sub (Constant a) (Constant b) = Constant (a - b)
+sub (Integ a) (Integ b) = Integ (a - b)
+sub (Constant a) (Integ b) = Constant (a - b)
+sub (Integ a) (Constant b) = Constant (a - b)
+sub (Subtract xs) expression = Subtract (expression:xs)
+sub expression (Sum xs) = Subtract (expression:xs)
+sub (Constant a) expression = Subtract ((Constant a):[expression])
+sub expression (Constant a) = Subtract ((Constant a):[expression])
+sub (Integ a) expression = Subtract ((Integ a):[expression])
+sub expression (Integ a) = Subtract ((Integ a):[expression])
+sub expression1 expression2 = Subtract [expression1, expression2]
 
 myNegate :: Expression -> Expression
 myNegate (Constant num) = Constant (-(num))
@@ -393,6 +414,18 @@ multiply expression (Integ a) = multiply (Integ a) expression
 multiply (Negate a) (Negate b) = multiply a b
 multiply (Negate a) expression = Product [Negate a, expression]
 multiply expression1 expression2 = Product [expression1, expression2]
+
+divide :: Expression -> Expression -> Expression
+divide (Constant a) (Constant b) = Constant (a / b)
+divide (Integ a) (Constant b) = Constant (a / b)
+divide (Constant a) (Integ b) = Constant (a / b)
+divide (Integ a) (Integ b) = Constant (a / b)
+divide (Constant a) expression = Divide [Constant a, expression]
+divide (Integ a) expression = Divide [Integ a, expression]
+divide (Divide xs) y = Divide (xs ++ [y])
+divide x (Divide (y:ys)) = Divide ((Product ((x:ys)):[y]))
+divide (Negate a) (Negate b) = divide a b
+divide expression1 expression2 = Divide [expression1, expression2]
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 
@@ -458,14 +491,16 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                      List.map ($ equation) transforms
                                 else []
 
-eqTransformations = [isolateVarByMult, isolateVarBySum, splitProduct, splitSum] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
+eqTransformations = [isolateVarByMult, isolateVarBySum, 
+                     splitProduct, splitSum, splitPower -- splitLogarithm
+                    ] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
 
 
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) transformations
 rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (exmap fn rhs)) transformations
 
 equationSize :: Equation -> Integer
-equationSize (Equation lhs rhs) = expressionSize lhs + expressionSize rhs
+equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
 
 isolateVarByMult :: Equation -> Equation
 isolateVarByMult (Equation (Product xs) rhs) = case sort xs of (Variable str):xs -> Equation (Variable str) (Divide (rhs:[Product xs]))
@@ -485,6 +520,16 @@ splitSum :: Equation -> Equation
 splitSum (Equation (Sum (x:xs)) rhs) = Equation x (Subtract (rhs:xs))
 splitSum (Equation lhs (Sum (x:xs))) = Equation (Subtract (lhs:xs)) x
 splitSum equation = equation
+
+splitPower :: Equation -> Equation
+splitPower (Equation (Power x expo) rhs) = Equation expo (Logarithm x rhs)
+splitPower (Equation lhs (Power x expo)) = Equation (Logarithm x lhs) expo
+splitPower equation = equation
+
+-- splitLogarithm :: Equation -> Equation
+-- splitLogarithm (Equation (Logarithm base expr) rhs) = Equation x (Subtract (rhs:xs))
+-- splitLogarithm (Equation lhs (Logarithm base expr) = Equation (Subtract (lhs:xs)) x
+-- splitLogarithm equation = equation
 
 solveEquation :: String -> IO ()
 solveEquation inp = case parse eqnparser "" inp of
