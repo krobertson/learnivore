@@ -141,8 +141,7 @@ showSolution (Solution Nothing) = "There is no valid solution"
 
 instance Show Solution where
   show = showSolution
-   
--- A future version of this function should use Data.Graph.AStar instead --                        
+                       
 expressionSize :: Expression -> Integer
 expressionSize (Negate x) = expressionSize x
 expressionSize (Absolute x) = 1 + expressionSize x
@@ -240,7 +239,7 @@ solve expression = Solution (case solutionPath of (Just path) -> Just (expressio
                      where solutionPath = if solved expression 
                                           then Just [expression] 
                                           else aStar expressionGraph 
-                                                     (\x y -> (abs $ (expressionSize x) - (expressionSize y)) +  1) 
+                                                     (\x y -> 1) 
                                                      expressionSize 
                                                      solved 
                                                      expression
