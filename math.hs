@@ -531,10 +531,22 @@ splitPower equation = equation
 -- splitLogarithm (Equation lhs (Logarithm base expr) = Equation (Subtract (lhs:xs)) x
 -- splitLogarithm equation = equation
 
+validSolution :: SolvedEquation -> Bool
+validSolution (SolvedEquation Nothing) = False
+validSolution (SolvedEquation (Just xs)) = Main.valid . last $ xs 
+
+solvedString :: SolvedEquation -> String
+solvedString solvedEquation
+          | validSolution solvedEquation = "=> Equation is True!"
+          | otherwise = "=> Equation is False!"
+
 solveEquation :: String -> IO ()
 solveEquation inp = case parse eqnparser "" inp of
-             { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
-             ; Right ans -> putStrLn . show . solveEq $ (eqnToEquation ans)
+             { Left err -> putStrLn $ "Not a legitimate algebraic equation" ++ show err
+             ; Right ans -> do { let xs = solveEq $ (eqnToEquation ans)
+                                ; putStrLn . show $ xs
+                                ; print $ solvedString xs
+                               }
              }
              
 printEquation :: String -> IO ()
