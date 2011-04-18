@@ -155,7 +155,7 @@ expressionSize _ = 1
 
 solved :: Expression -> Bool
 solved (Absolute x) = varSolved x
-solved x = (solved x) || (varSolved x)
+solved x = (constSolved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
 varSolved (Variable _) = True
@@ -211,7 +211,7 @@ listOfVariables (Power x y) = nub . concatMap listOfVariables $ x:y:[]
 listOfVariables _ = []
 
 expand :: Expression -> [Expression]
-expand x = twiddle (List.map exmap transformations) x
+expand = twiddle $ List.map exmap transformations
 
 expressionGraph :: Expression -> Set Expression                          
 expressionGraph = fromList . expand
