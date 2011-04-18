@@ -101,7 +101,7 @@ instance Show Expression where
 data Eqn = Eqn Expr Expr
 
 eqnparser = do { x <- exprparser
-               ; try (string "=") <|> string " = "
+               ; string "="
                ; y <- exprparser
                ; return (Eqn x y)}
                
