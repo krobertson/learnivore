@@ -3,15 +3,15 @@ from ghci, use solveEquation to solve arithmetic and algebraic equations from st
 
 future plans:
 -------------
-include all log and power equivalencies, add all the trigonometric functions, e, i, pi, factorial, and functions on complex numbers
+write an algebraic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
-systems of equations
+set up QuickCheck for testing
+
+include all log and power equivalencies, add all the trigonometric functions, e, i, pi, factorial, and functions on complex numbers
 
 combinatorics, derivatives, integrals, logic, higher maths
 
-write an algebraic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
-
-set up QuickCheck
+systems of equations
 
 install snap framework
   - expose as a json / html api
