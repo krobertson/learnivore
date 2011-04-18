@@ -436,8 +436,8 @@ solveEq equation = SolvedEquation (case solutionPath of (Just path) -> Just (equ
                                           then Just [equation] 
                                           else aStar equationGraph 
                                                      (\x y -> 1) 
-                                                     equationSize 
-                                                     solvedEq 
+                                                     equationSize
+                                                     solvedEq
                                                      equation
                                                      
 solvedEq :: Equation -> Bool
@@ -458,7 +458,7 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                      List.map ($ equation) transforms
                                 else []
 
-eqTransformations = [splitProduct, splitSum, isolateVarByMult, isolateVarBySum] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
+eqTransformations = [isolateVarByMult, isolateVarBySum, splitProduct, splitSum] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
 
 
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) transformations
