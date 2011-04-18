@@ -3,11 +3,11 @@ from ghci, use solveEquation to solve arithmetic and algebraic equations from st
 
 future plans:
 -------------
-include all log and power equivalencies, add all the trigonometric functions, e, i, and functions on complex numbers
+include all log and power equivalencies, add all the trigonometric functions, e, i, pi, factorial, and functions on complex numbers
 
 systems of equations
 
-derivatives, integrals, logic, higher maths
+combinatorics, derivatives, integrals, logic, higher maths
 
 write an algebraic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
