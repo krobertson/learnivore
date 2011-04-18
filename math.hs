@@ -30,7 +30,6 @@ data Expr = Var String | Const Double | In Integer | Uno Unop (Expr) | Duo Duop 
 data Unop = Neg | Abs deriving Show
 data Duop = Mult | Div | Add | Sub | Log | Pow deriving Show
 
-
 exprparser :: Parser Expr
 exprparser = buildExpressionParser table term <?> "expression"
 
@@ -98,6 +97,15 @@ data Expression = Variable String -- Product [(Variable "x"), (Integ 2)] = 2x
 
 instance Show Expression where
   show = showExpression
+  
+data Eqn = Eqn Expr Expr
+
+eqnparser = do { x <- exprparser
+               ; char '='
+               ; y <- exprparser
+               ; return (Eqn x y)}
+               
+eqnToEquation (Eqn expr1 expr2) = (Equation (exprToExpression expr1) (exprToExpression expr2))
 
 -- displaying an expression to the end user
 
@@ -435,6 +443,7 @@ solveEq equation = SolvedEquation (case solutionPath of (Just path) -> Just (equ
 solvedEq :: Equation -> Bool
 solvedEq (Equation lhs rhs)
         | (singleVariable lhs) && (constSolved rhs) = True
+        | constSolved lhs && constSolved rhs = True
         | otherwise = False
         
 equationGraph :: Equation -> Set Equation
@@ -466,6 +475,18 @@ isolateVarByMult (Equation lhs rhs) = Equation lhs rhs
 isolateVarBySum :: Equation -> Equation
 isolateVarBySum (Equation (Sum ((Variable str):xs)) rhs) = Equation (Variable str) (Subtract (rhs:[Sum xs]))  
 isolateVarBySum (Equation lhs rhs) = Equation lhs rhs
+
+solveEquation :: String -> IO ()
+solveEquation inp = case parse eqnparser "" inp of
+             { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
+             ; Right ans -> putStrLn . show . solveEq $ (eqnToEquation ans)
+             }
+             
+printEquation :: String -> IO ()
+printEquation inp = case parse eqnparser "" inp of
+             { Left err -> putStrLn $ "Not a legitimate algebraic equation" ++ show err
+             ; Right ans -> putStrLn . show $ (eqnToEquation ans)
+             }
 
 valid :: Equation -> Bool
 valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)

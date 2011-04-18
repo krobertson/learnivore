@@ -1,10 +1,12 @@
-from ghci, use loadExpression to load arithmetic expressions from strings
-simplification should move things around, but not collapse any operators
-collapse joins constants together via multiplication and addition
-flatten is a collapse step followed by a simplification
+from ghci, use solveExpression to simplify algebraic expressions from strings
+from ghci, use solveEquation to solve algebraic equations from strings
 
 future plans:
 -------------
+algebraic equation solving
+
+systems of equations
+
 include all log and power equivalencies, add all the trigonometric functions, e, i, and functions on complex numbers
 
 add derivatives, integrals, equations, logic, higher maths
