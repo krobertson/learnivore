@@ -7,7 +7,7 @@ include all log and power equivalencies, add all the trigonometric functions, e,
 
 systems of equations
 
-derivatives, integrals, equations, logic, higher maths
+derivatives, integrals, logic, higher maths
 
 write an algebraic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
