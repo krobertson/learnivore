@@ -11,8 +11,7 @@ import Text.Parsec.Prim
 import Text.Parsec.Combinator
 
 join :: String -> [String] -> String
-join _ [] = ""
-join str xs = foldl1 (\x y -> x ++ str ++ y) xs
+join str = concat . intersperse str
 
 around :: String -> String -> String -> String
 around obj start end = start ++ obj ++ end
@@ -25,45 +24,53 @@ printBetween str xs = print $ join str (List.map show xs)
 
 --- Exprs, a data type for containing simple binary expressions (for easy parsing)
 
-data Expr = Var String | Const Double | In Integer | Uno Unop (Expr) | Duo Duop (Expr) (Expr) | Seq [Expr]
+data Expr = Var String | Const Double | In Integer | Unary UnaryOp (Expr) | Binary BinaryOp (Expr) (Expr) | Seq [Expr]
     deriving Show
-data Unop = Neg | Abs deriving Show
-data Duop = Mult | Div | Add | Sub | Log | Pow deriving Show
+data UnaryOp = Neg | Abs | Par deriving Show
+data BinaryOp = Mult | Div | Add | Sub | Log | Pow deriving Show
+
+eqnparser :: Parser Eqn
+eqnparser = buildExpressionParser eqnTable term
 
 exprparser :: Parser Expr
-exprparser = buildExpressionParser table term <?> "expression"
+exprparser = buildExpressionParser exprTable term <?> "expression"
 
-table = [ [Prefix (m_reservedOp "-" >> return (Uno Neg))]
-        , [Infix (m_reservedOp "^" >> return (Duo Pow)) AssocLeft]
-        , [Infix (m_reservedOp "*" >> return (Duo Mult)) AssocLeft]
-        , [Infix (m_reservedOp "*" >> return (Duo Div)) AssocLeft]
-        , [Infix (m_reservedOp "+" >> return (Duo Add)) AssocLeft]
-        , [Infix (m_reservedOp "-" >> return (Duo Sub)) AssocLeft]
-        ]
+exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Neg))]
+            , [Infix (m_reservedOp "^" >> return (Binary Pow)) AssocLeft]
+            , [Infix (m_reservedOp "*" >> return (Binary Mult)) AssocLeft]
+            , [Infix (m_reservedOp "*" >> return (Binary Div)) AssocLeft]
+            , [Infix (m_reservedOp "+" >> return (Binary Add)) AssocLeft]
+            , [Infix (m_reservedOp "-" >> return (Binary Sub)) AssocLeft]
+            ]
         
-term = m_parens exprparser
-       <|> do {
-                string "log"
-              ; char '<'
-              ; x <- exprparser
-              ; char '>'
-              ; y <- m_parens exprparser
-              ; return (Duo Log x y)
-              }
-       <|> liftM Var m_identifier
-       <|> liftM In (m_natural)
-       <|> liftM Const m_float
-       <|> do {
-                char '|'
-              ; x <- exprparser
-              ; char '|'
-              ; return (Uno Abs x)
-              }
-       
+eqnTable = [[Infix (m_reservedOp "=" >> return (Eqn)) AssocLeft]]        
 
-def = emptyDef{ commentStart = "{-"
-              , commentEnd = "-}"
-              , identStart = letter
+within open close = do char open
+                       x <- exprparser
+                       char close
+                       return x
+                       
+logParser = do string "log"
+               base <- within '<' '>'
+               expr <- within '(' ')'
+               return (Binary Log base expr)
+         
+absParser = do x <- within '|' '|'
+               return (Unary Abs x)
+
+parenParser = do x <- m_parens exprparser
+                 return (Unary Par x)
+                 
+termParser = liftM Var m_identifier
+             <|> liftM In (m_natural)
+             <|> liftM Const m_float
+             
+term = parenParser
+       <|> logParser
+       <|> absParser
+       <|> termParser
+
+def = emptyDef{ identStart = letter
               , identLetter = oneOf $ ['1'..'9']
               , opStart = oneOf "|*-+=:^/"
               , opLetter = oneOf "|*-+=:^/"
@@ -100,10 +107,10 @@ instance Show Expression where
   
 data Eqn = Eqn Expr Expr
 
-eqnparser = do { x <- exprparser
-               ; string "="
-               ; y <- exprparser
-               ; return (Eqn x y)}
+-- eqnparser = do { x <- exprparser
+--                ; string "="
+--                ; y <- exprparser
+--               ; return (Eqn x y)}
                
 eqnToEquation (Eqn expr1 expr2) = (Equation (exprToExpression expr1) (exprToExpression expr2))
 
@@ -132,14 +139,14 @@ exprToExpression :: Expr -> Expression
 exprToExpression (Var str) = Variable str
 exprToExpression (Const x) = Constant x
 exprToExpression (In x) = Integ (fromInteger x :: Double)
-exprToExpression (Uno Neg x) = Negate (exprToExpression x)
-exprToExpression (Uno Abs x) = Absolute (exprToExpression x)
-exprToExpression (Duo Pow x y) = Power (exprToExpression x) (exprToExpression y)
-exprToExpression (Duo Mult x y) = Product [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Div x y) = Divide [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Add x y) = Sum [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Duo Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
+exprToExpression (Unary Neg x) = Negate (exprToExpression x)
+exprToExpression (Unary Abs x) = Absolute (exprToExpression x)
+exprToExpression (Binary Pow x y) = Power (exprToExpression x) (exprToExpression y)
+exprToExpression (Binary Mult x y) = Product [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Binary Div x y) = Divide [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Binary Add x y) = Sum [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Binary Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
+exprToExpression (Binary Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
 
 data Solution = Solution (Maybe [Expression]) 
 
