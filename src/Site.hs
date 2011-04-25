@@ -43,17 +43,16 @@ index = ifTop $ heistLocal (bindSplices indexSplices) $ render "index"
 ------------------------------------------------------------------------------
 -- | Renders the echo page.
 solve :: Application ()
-solve = do
-    eqn <- decodedParam "eqn"
-    heistLocal (bindString "solution" $ T.decodeUtf8 . B.pack . BS.encode $ solveEquation . BS.decode . B.unpack $ eqn) $ render "solve"
-  where
-    decodedParam p = fromMaybe "" <$> getParam p
+solve = do eqn <- decodedParam "eqn"
+           heistLocal (bindString "solution" $ T.decodeUtf8 . B.pack . BS.encode $ solveEquation . BS.decode . B.unpack $ eqn) $ render "solve"
+        where
+          decodedParam p = fromMaybe "" <$> getParam p
 
 
 ------------------------------------------------------------------------------
 -- | The main entry point handler.
 site :: Application ()
 site = route [ ("/",            index)
-             , ("/solve/:eqn",  solve)
+             , ("/solve",  solve)
              ]
        <|> serveDirectory "resources/static"
