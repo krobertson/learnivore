@@ -19,7 +19,9 @@ import           Snap.Extension.Timer
 import           Snap.Util.FileServe
 import           Snap.Types
 import           Text.Templating.Heist
-
+import           LearnMath
+import qualified Data.ByteString as B
+import qualified Codec.Binary.UTF8.String as BS
 import           Application
 
 
@@ -40,10 +42,10 @@ index = ifTop $ heistLocal (bindSplices indexSplices) $ render "index"
 
 ------------------------------------------------------------------------------
 -- | Renders the echo page.
-echo :: Application ()
-echo = do
-    message <- decodedParam "stuff"
-    heistLocal (bindString "message" (T.decodeUtf8 message)) $ render "echo"
+solve :: Application ()
+solve = do
+    eqn <- decodedParam "eqn"
+    heistLocal (bindString "solution" $ T.decodeUtf8 . B.pack . BS.encode $ solveEquation . BS.decode . B.unpack $ eqn) $ render "solve"
   where
     decodedParam p = fromMaybe "" <$> getParam p
 
@@ -52,6 +54,6 @@ echo = do
 -- | The main entry point handler.
 site :: Application ()
 site = route [ ("/",            index)
-             , ("/echo/:stuff", echo)
+             , ("/solve/:eqn",  solve)
              ]
        <|> serveDirectory "resources/static"
