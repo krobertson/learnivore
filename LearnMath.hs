@@ -1,3 +1,7 @@
+module LearnMath
+( solveExpression
+, solveEquation
+) where
 import List
 import Data.Set
 import Data.Graph.AStar
@@ -29,9 +33,6 @@ data Expr = Var String | Const Double | In Integer | Unary UnaryOp (Expr) | Bina
 data UnaryOp = Neg | Abs | Par deriving Show
 data BinaryOp = Mult | Div | Add | Sub | Log | Pow deriving Show
 
-eqnparser :: Parser Eqn
-eqnparser = buildExpressionParser eqnTable term
-
 exprparser :: Parser Expr
 exprparser = buildExpressionParser exprTable term <?> "expression"
 
@@ -43,7 +44,7 @@ exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Neg))]
             , [Infix (m_reservedOp "-" >> return (Binary Sub)) AssocLeft]
             ]
         
-eqnTable = [[Infix (m_reservedOp "=" >> return (Eqn)) AssocLeft]]        
+-- eqnTable = [[Infix (m_reservedOp "=" >> return (Eqn)) AssocLeft]]        
 
 within open close = do char open
                        x <- exprparser
@@ -107,10 +108,10 @@ instance Show Expression where
   
 data Eqn = Eqn Expr Expr
 
--- eqnparser = do { x <- exprparser
---                ; string "="
---                ; y <- exprparser
---               ; return (Eqn x y)}
+eqnparser = do { x <- exprparser
+               ; string "="
+               ; y <- exprparser
+              ; return (Eqn x y)}
                
 eqnToEquation (Eqn expr1 expr2) = (Equation (exprToExpression expr1) (exprToExpression expr2))
 
@@ -264,8 +265,14 @@ solve expression = Solution (case solutionPath of (Just path) -> Just (expressio
                                                      expression
 
 
-solveExpression :: String -> IO ()
+solveExpression :: String -> String
 solveExpression inp = case parse exprparser "" inp of
+                      { Left err -> "Not a legitimate arithmetic expression: " ++ show err
+                      ; Right ans -> show . solve $ exprToExpression ans
+                      }
+
+printSolvedExpression :: String -> IO ()
+printSolvedExpression inp = case parse exprparser "" inp of
              { Left err -> putStrLn $ "Not a legitimate arithmetic expression " ++ show err
              ; Right ans -> putStrLn . show . solve $ (exprToExpression ans)
              }
@@ -540,15 +547,21 @@ splitPower equation = equation
 
 validSolution :: SolvedEquation -> Bool
 validSolution (SolvedEquation Nothing) = False
-validSolution (SolvedEquation (Just xs)) = Main.valid . last $ xs 
+validSolution (SolvedEquation (Just xs)) = LearnMath.valid . last $ xs 
 
 solvedString :: SolvedEquation -> String
 solvedString solvedEquation
           | validSolution solvedEquation = "=> Equation is True!"
           | otherwise = "=> Equation is False!"
 
-solveEquation :: String -> IO ()
+solveEquation :: String -> String
 solveEquation inp = case parse eqnparser "" inp of
+                    { Left err -> show err
+                    ; Right ans -> let solution = solveEq $ eqnToEquation ans in show solution ++ "\n " ++ solvedString solution
+                    } 
+
+printSolvedEquation :: String -> IO ()
+printSolvedEquation inp = case parse eqnparser "" inp of
              { Left err -> putStrLn $ "Not a legitimate algebraic equation" ++ show err
              ; Right ans -> do { let xs = solveEq $ (eqnToEquation ans)
                                 ; putStrLn . show $ xs
@@ -566,13 +579,3 @@ valid :: Equation -> Bool
 valid (Equation (Variable _) (Constant _)) = True
 valid (Equation (Variable _) (Integ _)) = True
 valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)
-        
-ask question = do putStrLn $ question++":"
-                  x <- getLine
-                  putStrLn "------------------"
-                  return x
-                  
-main = do {x <- ask "Please enter an equation"
-          ; solveEquation x
-          ; return ()
-        }
