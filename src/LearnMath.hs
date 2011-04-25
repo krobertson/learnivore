@@ -384,6 +384,9 @@ transformations = [absolutify, multiplyByZero, multiplyByOne, distribute,
 
 add :: Expression -> Expression -> Expression
 add (Constant a) (Constant b) = Constant (a + b)
+add (Variable x) (Variable y) 
+                            | x == y = Product [Integ 2.0, Variable x]
+                            | otherwise = Sum [Variable x, Variable y]
 add (Integ a) (Integ b) = Integ (a + b)
 add (Constant a) (Integ b) = Constant (a + b)
 add (Integ a) (Constant b) = Constant (a + b)
@@ -396,6 +399,9 @@ add expression (Integ a) = Sum ((Integ a):[expression])
 add expression1 expression2 = Sum [expression1, expression2]
 
 sub :: Expression -> Expression -> Expression
+sub (Variable x) (Variable y) 
+                            | x == y = Integ 0.0
+                            | otherwise = Subtract [Variable x, Variable y]
 sub (Constant a) (Constant b) = Constant (a - b)
 sub (Integ a) (Integ b) = Integ (a - b)
 sub (Constant a) (Integ b) = Constant (a - b)
@@ -415,6 +421,9 @@ myNegate (Negate expression) = expression
 myNegate expression = Negate expression
 
 multiply :: Expression -> Expression -> Expression
+multiply (Variable x) (Variable y)
+                      | x == y = (Power (Variable x) (Integ 2.0))
+                      | otherwise = Product [Variable x, Variable y]
 multiply (Constant a) (Constant b) = Constant (a * b)
 multiply (Integ a) (Constant b) = Constant (a * b)
 multiply (Constant a) (Integ b) = Constant (a * b)
@@ -430,6 +439,9 @@ multiply (Negate a) expression = Product [Negate a, expression]
 multiply expression1 expression2 = Product [expression1, expression2]
 
 divide :: Expression -> Expression -> Expression
+divide (Variable x) (Variable y)
+                    | x == y = Integ 1.0
+                    | otherwise = Divide [Variable x, Variable y]
 divide (Constant a) (Constant b) = Constant (a / b)
 divide (Integ a) (Constant b) = Constant (a / b)
 divide (Constant a) (Integ b) = Constant (a / b)
