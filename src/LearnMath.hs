@@ -506,7 +506,8 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                 else []
 
 eqTransformations = [isolateVarByMult, isolateVarBySum, 
-                     splitProduct, splitSum, splitPower -- splitLogarithm
+                     splitProduct, splitDivide, splitSum, splitSubtract, 
+                     splitPower, splitLogarithm
                     ] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
 
 
@@ -530,15 +531,30 @@ splitProduct (Equation (Product (x:xs)) rhs) = Equation x (Divide (rhs:xs))
 splitProduct (Equation lhs (Product (x:xs))) = Equation (Divide (lhs:xs)) x
 splitProduct equation = equation
 
+splitDivide :: Equation -> Equation
+splitDivide (Equation (Divide (x:xs)) rhs) = Equation x (Product (rhs:xs))
+splitDivide (Equation lhs (Divide (x:xs))) = Equation (Product (lhs:xs)) x
+splitDivide equation = equation
+
 splitSum :: Equation -> Equation
 splitSum (Equation (Sum (x:xs)) rhs) = Equation x (Subtract (rhs:xs))
 splitSum (Equation lhs (Sum (x:xs))) = Equation (Subtract (lhs:xs)) x
 splitSum equation = equation
 
+splitSubtract :: Equation -> Equation
+splitSubtract (Equation (Subtract (x:xs)) rhs) = Equation x (Sum (rhs:xs))
+splitSubtract (Equation lhs (Subtract (x:xs))) = Equation (Sum (lhs:xs)) x
+splitSubtract equation = equation
+
 splitPower :: Equation -> Equation
 splitPower (Equation (Power x expo) rhs) = Equation expo (Logarithm x rhs)
 splitPower (Equation lhs (Power x expo)) = Equation (Logarithm x lhs) expo
 splitPower equation = equation
+
+splitLogarithm :: Equation -> Equation
+splitLogarithm (Equation (Logarithm b x) rhs) = Equation x (Power b rhs)
+splitLogarithm (Equation lhs (Logarithm b x)) = Equation (Power b lhs) x
+splitLogarithm equation = equation
 
 -- splitLogarithm :: Equation -> Equation
 -- splitLogarithm (Equation (Logarithm base expr) rhs) = Equation x (Subtract (rhs:xs))
