@@ -39,7 +39,7 @@ exprparser = buildExpressionParser exprTable term <?> "expression"
 exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Neg))]
             , [Infix (m_reservedOp "^" >> return (Binary Pow)) AssocLeft]
             , [Infix (m_reservedOp "*" >> return (Binary Mult)) AssocLeft]
-            , [Infix (m_reservedOp "*" >> return (Binary Div)) AssocLeft]
+            , [Infix (m_reservedOp "/" >> return (Binary Div)) AssocLeft]
             , [Infix (m_reservedOp "+" >> return (Binary Add)) AssocLeft]
             , [Infix (m_reservedOp "-" >> return (Binary Sub)) AssocLeft]
             ]
