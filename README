@@ -1,4 +1,7 @@
-run `ghc --make -o learnivore math.hs` to build into a command-line program that will solve a single equation before exiting
+run cabal install in this directory to install learnivore, 
+  then execute with learnivore -p 8000
+  then go to localhost:8000
+  then input an equation
 from ghci, use solveExpression to simplify arithmetic and algebraic expressions from strings
 from ghci, use solveEquation to solve arithmetic and algebraic equations from strings
 
@@ -34,7 +37,7 @@ combinatorics, derivatives, integrals, logic, higher maths
 
 systems of equations
 
-install snap framework
+Snap
   - expose as a json / html api
     - solve expression (expression -> (expression, pathToSolution))
     - generate complex expression (expression, pathToSolution, solution, generators)
