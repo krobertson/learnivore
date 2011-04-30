@@ -2,8 +2,11 @@ run cabal install in this directory to install learnivore,
   then execute with learnivore -p 8000
   then go to localhost:8000
   then input an equation
-from ghci, use solveExpression to simplify arithmetic and algebraic expressions from strings
-from ghci, use solveEquation to solve arithmetic and algebraic equations from strings
+from ghci, :l Equations
+  and use solveExpression to simplify arithmetic and algebraic expressions from strings
+  and use solveEquation to solve arithmetic and algebraic equations from strings*
+
+*For now, please make sure that = sign has no spaces around it (eg. 2 * x=5 * 2; NOT 2 * x = 5 * 2)
 
 Current Functionality:
 ----------------------
@@ -21,8 +24,6 @@ x = log<2.0>(4.0)
 x = 2.0
 "=> Equation is True!"
 
-For now, please make sure that = sign has no spaces around it (eg. 2 * x=5 * 2; NOT 2 * x = 5 * 2)
-
 future plans:
 -------------
 DRY the expression and equation transformations up
@@ -38,7 +39,7 @@ combinatorics, derivatives, integrals, logic, higher maths
 systems of equations
 
 Snap
-  - expose as a json / html api
+  - expose as a json api
     - solve expression (expression -> (expression, pathToSolution))
     - generate complex expression (expression, pathToSolution, solution, generators)
     - verify solution (expression -> solution)
