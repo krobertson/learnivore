@@ -19,10 +19,10 @@ import           Snap.Extension.Timer
 import           Snap.Util.FileServe
 import           Snap.Types
 import           Text.Templating.Heist
-import           LearnMath
 import qualified Data.ByteString as B
 import qualified Codec.Binary.UTF8.String as BS
 import           Application
+import           LearnMath
 
 
 ------------------------------------------------------------------------------
@@ -53,6 +53,6 @@ solve = do eqn <- decodedParam "eqn"
 -- | The main entry point handler.
 site :: Application ()
 site = route [ ("/",            index)
-             , ("/solve",  solve)
+             , ("/solve",       solve)
              ]
        <|> serveDirectory "resources/static"
