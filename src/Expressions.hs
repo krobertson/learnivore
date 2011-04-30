@@ -16,6 +16,47 @@ import List
 import Data.Set
 import Data.Graph.AStar
 import MathStructures  
+      
+solve :: Expression -> Solution
+solve expression = Solution (case solutionPath of (Just path) -> Just (expression:path)
+                                                  Nothing -> Nothing)
+                     where solutionPath = if solved expression 
+                                          then Just [expression] 
+                                          else aStar expressionGraph 
+                                                     (\x y -> 1) 
+                                                     expressionSize 
+                                                     solved 
+                                                     expression
+  
+
+solveExpression :: String -> String
+solveExpression = processExpression solve
+
+printSolvedExpression :: String -> IO ()
+printSolvedExpression = putStrLn . solveExpression
+
+expand :: Expression -> [Expression]
+expand = twiddle $ List.map exmap expressionTransformations
+
+expressionGraph :: Expression -> Set Expression                          
+expressionGraph = fromList . expand
+
+twiddle :: [Expression -> Expression] -> Expression -> [Expression]
+twiddle transforms expression = if (not . solved $ expression) 
+                                then List.filter (not . (== expression)) $
+                                     List.map ($ expression) transforms
+                                else []
+                                
+exmap :: (Expression -> Expression) -> Expression -> Expression
+exmap fn (Sum xs) = fn $ Sum (List.map (exmap fn) xs)
+exmap fn (Subtract xs) = fn $ Subtract (List.map (exmap fn) xs)
+exmap fn (Product xs) = fn $ Product (List.map (exmap fn) xs)
+exmap fn (Divide xs) = fn $ Divide (List.map (exmap fn) xs)
+exmap fn (Power x y) = fn $ Power (exmap fn x) (exmap fn y)
+exmap fn (Logarithm x y) = fn $ Logarithm (exmap fn x) (exmap fn y)
+exmap fn (Absolute x) = fn $ Absolute (exmap fn x)
+exmap fn (Negate y) = fn $ Negate (exmap fn y)
+exmap fn z = fn z
 
 expressionSize :: Expression -> Integer
 expressionSize (Negate x) = expressionSize x
@@ -28,6 +69,7 @@ expressionSize (Power x y) = 1 + expressionSize x + expressionSize y
 expressionSize (Logarithm x y) = 1 + expressionSize x + expressionSize y
 expressionSize _ = 1
 
+-- solution checkers
 solved :: Expression -> Bool
 solved (Absolute x) = varSolved x
 solved x = (constSolved x) || (varSolved x)
@@ -88,50 +130,6 @@ listOfVariables (Subtract xs) = nub . concatMap listOfVariables $ xs
 listOfVariables (Logarithm x y) = nub . concatMap listOfVariables $ x:y:[]
 listOfVariables (Power x y) = nub . concatMap listOfVariables $ x:y:[]
 listOfVariables _ = []
-
-expand :: Expression -> [Expression]
-expand = twiddle $ List.map exmap expressionTransformations
-
-expressionGraph :: Expression -> Set Expression                          
-expressionGraph = fromList . expand
-
-twiddle :: [Expression -> Expression] -> Expression -> [Expression]
-twiddle transforms expression = if (not . solved $ expression) 
-                                then List.filter (not . (== expression)) $
-                                     List.map ($ expression) transforms
-                                else []
-                  
-exmap :: (Expression -> Expression) -> Expression -> Expression
-exmap fn (Sum xs) = fn $ Sum (List.map (exmap fn) xs)
-exmap fn (Subtract xs) = fn $ Subtract (List.map (exmap fn) xs)
-exmap fn (Product xs) = fn $ Product (List.map (exmap fn) xs)
-exmap fn (Divide xs) = fn $ Divide (List.map (exmap fn) xs)
-exmap fn (Power x y) = fn $ Power (exmap fn x) (exmap fn y)
-exmap fn (Logarithm x y) = fn $ Logarithm (exmap fn x) (exmap fn y)
-exmap fn (Absolute x) = fn $ Absolute (exmap fn x)
-exmap fn (Negate y) = fn $ Negate (exmap fn y)
-exmap fn z = fn z
-      
-solve :: Expression -> Solution
-solve expression = Solution (case solutionPath of (Just path) -> Just (expression:path)
-                                                  Nothing -> Nothing)
-                     where solutionPath = if solved expression 
-                                          then Just [expression] 
-                                          else aStar expressionGraph 
-                                                     (\x y -> 1) 
-                                                     expressionSize 
-                                                     solved 
-                                                     expression
-  
-
-solveExpression :: String -> String
-solveExpression = processExpression solve
-
-printSolvedExpression :: String -> IO ()
-printSolvedExpression = putStrLn . solveExpression
-
-printExpression = putStrLn . processExpression id
-  
 
 -- expressionTransformations
 

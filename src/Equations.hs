@@ -3,6 +3,7 @@ module Equations
 solveEq,
 solveEquation,
 printSolvedEquation,
+printEquation,
 Equations.valid,
 equationSize,
 equationTransformations
@@ -13,6 +14,13 @@ import Data.Set
 import Data.Graph.AStar
 import MathStructures
 import Expressions
+
+solveEquation :: String -> String
+solveEquation = processEquation solveEq
+
+printSolvedEquation :: String -> IO ()
+printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ ans
+                                                             show xs ++ "\n" ++ solvedString xs)
 
 solveEq :: Equation -> SolvedEquation
 solveEq equation = SolvedEquation (case solutionPath of (Just path) -> Just (equation:path)
@@ -42,18 +50,20 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                 then List.filter (not . (== equation)) $
                                      List.map ($ equation) transforms
                                 else []
+                              
+equationSize :: Equation -> Integer
+equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
+
+-- Equation Transformations
 
 equationTransformations = [isolateVarByMult, isolateVarBySum, 
                      splitProduct, splitDivide, splitSum, splitSubtract, 
                      splitPower, splitLogarithm
                     ] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
 
-
+  -- (lifted expression transformations)
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) expressionTransformations
 rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (exmap fn rhs)) expressionTransformations
-
-equationSize :: Equation -> Integer
-equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
 
 isolateVarByMult :: Equation -> Equation
 isolateVarByMult (Equation (Product xs) rhs) = case sort xs of (Variable str):xs -> Equation (Variable str) (Divide (rhs:[Product xs]))
@@ -99,6 +109,12 @@ splitLogarithm equation = equation
 -- splitLogarithm (Equation lhs (Logarithm base expr) = Equation (Subtract (lhs:xs)) x
 -- splitLogarithm equation = equation
 
+-- Validity
+valid :: Equation -> Bool
+valid (Equation (Variable _) (Constant _)) = True
+valid (Equation (Variable _) (Integ _)) = True
+valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)
+
 validSolution :: SolvedEquation -> Bool
 validSolution (SolvedEquation Nothing) = False
 validSolution (SolvedEquation (Just xs)) = Equations.valid . last $ xs 
@@ -107,16 +123,3 @@ solvedString :: SolvedEquation -> String
 solvedString solvedEquation
           | validSolution solvedEquation = "=> Equation is True!"
           | otherwise = "=> Equation is False!"
-
-solveEquation :: String -> String
-solveEquation = processEquation solveEq
-
-printSolvedEquation :: String -> IO ()
-printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ ans
-                                                             show xs ++ "\n" ++ solvedString xs)
-            
-
-valid :: Equation -> Bool
-valid (Equation (Variable _) (Constant _)) = True
-valid (Equation (Variable _) (Integ _)) = True
-valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)

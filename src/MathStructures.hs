@@ -2,6 +2,8 @@ module MathStructures
 (
 processExpression,
 processEquation,
+printEquation,
+printExpression,
 Expression(..),
 Equation(..),
 Solution(..),
@@ -17,14 +19,6 @@ import Text.Parsec.Token
 import Text.Parsec.Language
 import Text.Parsec.Prim
 import Text.Parsec.Combinator
-
-
--- Data structures for parsing purposes
-data UnaryOp = Neg | Abs | Par deriving Show
-data BinaryOp = Mult | Div | Add | Sub | Log | Pow deriving Show
-
-data Expr = Var String | Const Double | In Integer | Unary UnaryOp (Expr) | Binary BinaryOp (Expr) (Expr) | Seq [Expr] deriving Show
-data Eqn = Eqn Expr Expr
 
 -- Data structure for actual calculation
 data Expression = Variable String -- Product [(Variable "x"), (Integ 2)] = 2x
@@ -48,6 +42,15 @@ data Equation = Equation {
 data Solution = Solution (Maybe [Expression]) 
 data SolvedEquation = SolvedEquation (Maybe [Equation])
 
+-- Data structures for parsing purposes
+data UnaryOp = Neg | Abs | Par deriving Show
+data BinaryOp = Mult | Div | Add | Sub | Log | Pow deriving Show
+
+data Expr = Var String | Const Double | In Integer | Unary UnaryOp (Expr) | Binary BinaryOp (Expr) (Expr) | Seq [Expr] deriving Show
+data Eqn = Eqn Expr Expr
+
+-- instance declarations
+
 instance Show Expression where
   show = showExpression
 
@@ -61,6 +64,7 @@ instance Show SolvedEquation where
   show = showSolvedEquation
 
 -- String and print functions
+
 showExpression :: Expression-> String
 showExpression (Product xs) = join " * " (map showExpression' xs)
 showExpression (Divide xs) = join " / " (map showExpression' xs)
@@ -85,6 +89,12 @@ showSolution (Solution Nothing) = "There is no valid solution"
 showSolvedEquation :: SolvedEquation -> String
 showSolvedEquation (SolvedEquation (Just xs)) = join "\n=>\n" (map show xs)
 showSolvedEquation (SolvedEquation Nothing) = "There is no valid solution"
+
+printEquation :: String -> IO ()
+printEquation = putStrLn . processEquation id
+             
+printExpression :: String -> IO ()
+printExpression = putStrLn . processExpression id
   
 -- parser wrappers
 processExpression :: (Show a) => (Expression -> a) -> String -> String
@@ -98,15 +108,6 @@ processEquation fn inp = case parse eqnparser "" inp of
                          ; Right ans -> show . fn $ eqnToEquation ans
                          } 
 -- show helpers 
-
-printEquation :: String -> IO ()
-printEquation inp = case parse eqnparser "" inp of
-             { Left err -> putStrLn $ "Not a legitimate algebraic equation" ++ show err
-             ; Right ans -> putStrLn . show $ (eqnToEquation ans)
-             }
-             
-printExpression :: String -> IO ()
-printExpression = putStrLn . processExpression id
 
 printBetween :: (Show a) => String -> [a] -> IO ()
 printBetween str xs = print $ join str (map show xs)
@@ -135,13 +136,15 @@ exprToExpression (Binary Add x y) = Sum [(exprToExpression x), (exprToExpression
 exprToExpression (Binary Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
 exprToExpression (Binary Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
 
+eqnToEquation :: Eqn -> Equation
+eqnToEquation (Eqn expr1 expr2) = (Equation (exprToExpression expr1) (exprToExpression expr2))
+
 -- parsers
+eqnparser :: Parser Eqn
 eqnparser = do { x <- exprparser
                ; string "="
                ; y <- exprparser
               ; return (Eqn x y)}
-               
-eqnToEquation (Eqn expr1 expr2) = (Equation (exprToExpression expr1) (exprToExpression expr2))
 
 exprparser :: Parser Expr
 exprparser = buildExpressionParser exprTable term <?> "expression"
