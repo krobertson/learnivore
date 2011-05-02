@@ -146,6 +146,10 @@ sortExpression (Absolute x) = Absolute x
 sortExpression (Negate y) = Negate y
 sortExpression z = z
 
+pop :: Expression -> Expression
+pop (Parens x) = x
+pop x = x
+
 multiplyByZero :: Expression -> Expression
 multiplyByZero (Product xs) = if (any (\x -> (x == Constant 0.0) || (x == Integ 0.0)) (List.map multiplyByZero xs)) then Integ 0.0 else (Product xs)
 multiplyByZero xs = xs
@@ -197,7 +201,6 @@ squash (Negate x) = Negate (squash x)
 squash (Parens x) = squash x
 squash x = x
 
-
 squashSum (Sum (x:[])) = x
 squashSum (Sum ((Sum xs):ys)) = Sum (xs ++ ys)
 squashSum (Sum (x:(Sum xs):ys)) = Sum (x:xs ++ ys)
@@ -228,7 +231,7 @@ collapseSubtract (Subtract (x:xs)) = foldl sub x xs
 collapseSubtract xs = xs
 
 expressionTransformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseSubtract, collapseProduct, collapseDivide, squash, --collapseVariables,
+                   collapseSum, collapseSubtract, collapseProduct, collapseDivide, pop, --collapseVariables,
                    logify, exponentiate, negatify, sortExpression]
 -- merging
 

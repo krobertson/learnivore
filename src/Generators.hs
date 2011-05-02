@@ -4,6 +4,7 @@ module Generators
 import System.Random
 import System.IO.Unsafe
 import MathStructures
+import Expressions
 import Equations   
 
 randomInt n = unsafePerformIO $ getStdRandom (randomR (1,n))  
@@ -29,3 +30,4 @@ simple = layers 2 20
 moderate = layers 3 20
 complex = layers 4 20
 hard = layers 5 20
+
