@@ -21,9 +21,10 @@ import Text.Parsec.Prim
 import Text.Parsec.Combinator
 
 -- Data structure for actual calculation
-data Expression = Variable String -- Product [(Variable "x"), (Integ 2)] = 2x
+data Expression = Variable String
                 | Constant Double
                 | Integ Double
+                | Parens Expression
                 | Absolute (Expression)
                 | Negate (Expression)
                 | Sum [Expression]
@@ -70,6 +71,7 @@ showExpression (Product xs) = join " * " (map showExpression' xs)
 showExpression (Divide xs) = join " / " (map showExpression' xs)
 showExpression (Sum xs) = join " + " (map showExpression' xs)
 showExpression (Subtract xs) = join " - " (map showExpression' xs)
+showExpression (Parens x) = parenthesize  $ showExpression x
 showExpression expression = showExpression' expression
 
 showExpression' :: Expression -> String
@@ -124,6 +126,7 @@ angleBracket x = around x "<" ">"
 -- transformation of parsed objects into calculatable objects
 
 exprToExpression :: Expr -> Expression
+exprToExpression (Unary Par x) = Parens (exprToExpression x)
 exprToExpression (Var str) = Variable str
 exprToExpression (Const x) = Constant x
 exprToExpression (In x) = Integ (fromInteger x :: Double)

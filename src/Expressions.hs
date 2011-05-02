@@ -48,6 +48,7 @@ twiddle transforms expression = if (not . solved $ expression)
                                 else []
                                 
 exmap :: (Expression -> Expression) -> Expression -> Expression
+exmap fn (Parens x) = fn x
 exmap fn (Sum xs) = fn $ Sum (List.map (exmap fn) xs)
 exmap fn (Subtract xs) = fn $ Subtract (List.map (exmap fn) xs)
 exmap fn (Product xs) = fn $ Product (List.map (exmap fn) xs)
@@ -59,6 +60,7 @@ exmap fn (Negate y) = fn $ Negate (exmap fn y)
 exmap fn z = fn z
 
 expressionSize :: Expression -> Integer
+expressionSize (Parens x) = expressionSize x
 expressionSize (Negate x) = expressionSize x
 expressionSize (Absolute x) = 1 + expressionSize x
 expressionSize (Sum xs) = foldl (+) 1 $ List.map expressionSize xs
@@ -192,6 +194,7 @@ squash (Logarithm x y) = Logarithm (squash x) (squash y)
 squash (Power x y) = Power (squash x) (squash y)
 squash (Absolute x) = Absolute (squash x)
 squash (Negate x) = Negate (squash x)
+squash (Parens x) = squash x
 squash x = x
 
 
