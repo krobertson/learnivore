@@ -309,6 +309,7 @@ divide expression1 expression2 = Divide [expression1, expression2]
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 
 evaluate :: Expression -> Double
+evaluate (Parens expression)          = evaluate expression
 evaluate (Constant value)             = value
 evaluate (Integ value)                = value
 evaluate (Absolute value)             = abs (evaluate value)
