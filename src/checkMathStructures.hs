@@ -1,36 +1,68 @@
-import System.Random
-import System.IO.Unsafe
 import MathStructures
-import Test.QuickCheck
+import Test.HUnit
+         
+main = runTestTT $ TestList (baseCaseTests:arithmeticCases:[])
 
--- newtype ExprString = ExprString String
--- instance Arbitrary ExprString where
---   arbitrary = do i <- choose (2, 20)
---                  terms <- map (\fn -> fn(1)) $ take (i+1) (repeat arbitraryTerm)
---                  ops <- map (\fn -> fn(1)) $ take (i) (repeat arbitraryOperator)
---                  return ((head terms):(zipWith (:) (tail terms) ops))
---   
---   
--- randomInt n = unsafePerformIO $ getStdRandom (randomR (1,n))
--- 
--- arbitraryInt = show . randomInt $ 20
--- arbitraryConst = (show (fromInteger $ randomInt 20))
--- arbitraryVariable = "x"
--- terms = [arbitraryInt, arbitraryConst, arbitraryVariable]
--- operators = "+*/^-"
--- arbitraryTerm _ = (terms !! (randomInt $ (length terms) - 1))
--- arbitraryOperator _ = (operators !! (randomInt $ (length operators) - 1))
+baseCaseTests = TestLabel "Base Cases" (TestList [testInt, testConst, testVar])
+arithmeticCases = TestLabel "Arithmetic Cases" (TestList [testAdd, testAddV, testAddDiff, testSub, 
+                                                          testMult, testDiv, testPow, testLog])
 
+testInt = TestCase $ assertEqual
+          "should process a single integer as an expression"
+          "1" $
+          processExpression id "1"
+          
+testConst = TestCase $ assertEqual
+          "should process a single floating point number as an expression"
+          "1.0" $
+          processExpression id "1.0"
+          
+testVar = TestCase $ assertEqual
+          "should process a single variable as an expression"
+          "x" $
+          processExpression id "x"
+          
+testAdd = TestCase $ assertEqual
+          "should process an integer addition as an expression"
+          "1 + 1" $
+          processExpression id "1 + 1"
+          
+testAddV = TestCase $ assertEqual
+          "should process a variable addition as an expression"
+          "x + 1" $
+          processExpression id "x + 1"
+          
+testAddDiff = TestCase $ assertEqual
+          "should process addition of an integer and a double as an expression"
+          "1 + 1.0" $
+          processExpression id "1 + 1.0" 
+          
+testAddDiff2 = TestCase $ assertEqual
+          "should process addition of a double and an integer as an expression"
+          "1.0 + 1" $
+          processExpression id "1.0 + 1"          
+          
+testSub = TestCase $ assertEqual
+          "should process an integer subtraction as an expression"
+          "1 - 1" $
+          processExpression id "1 - 1"
+          
+testMult = TestCase $ assertEqual
+          "should process an integer multiplication as an expression"
+          "1 * 1" $
+          processExpression id "1 * 1"
+          
+testDiv = TestCase $ assertEqual
+          "should process an integer division as an expression"
+          "1 / 1" $
+          processExpression id "1 / 1"
+          
+testPow = TestCase $ assertEqual
+          "should process an integer exponentiation as an expression"
+          "1^1" $
+          processExpression id "1^1"
 
--- it should recognize a single int, const, or variable as an expression
--- prop_SingleInt inp = processExpression id inp == show (Integ (fromInteger . read $ inp)) 
--- prop_SingleConst inp = processExpression id inp == show (Constant (read inp))
--- prop_SingleVar inp = processExpression id inp == show (Variable inp)
--- 
--- prop_SingleInt "1"
--- prop_SingleConst "2.0"
--- prop_SingleVar "x"
-
--- it should recognize any negated term as an expression
-
--- it should recognize any interleaved combination of terms and operators as an expression provided it starts and stops with a term
+testLog = TestCase $ assertEqual
+          "should process an integer logarithm as an expression"
+          "log<2>(4)" $
+          processExpression id "log<2>(4)"

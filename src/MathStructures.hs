@@ -77,7 +77,7 @@ showExpression expression = showExpression' expression
 showExpression' :: Expression -> String
 showExpression' (Variable string) = string
 showExpression' (Constant a) = show a
-showExpression' (Integ a) = show a
+showExpression' (Integ a) = show (round a)
 showExpression' (Negate a) = "-" ++ showExpression' a
 showExpression' (Absolute a) = around (showExpression a) "|" "|"
 showExpression' (Power a b) = showExpression' a ++ "^" ++ showExpression' b
