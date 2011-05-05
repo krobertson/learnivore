@@ -46,278 +46,246 @@ twiddle transforms expression = if (not . solved $ expression)
                                 then List.filter (not . (== expression)) $
                                      List.map ($ expression) transforms
                                 else []
-                                
-exmap :: (Expression -> Expression) -> Expression -> Expression
-exmap fn (Parens x) = fn x
-exmap fn (Sum xs) = fn $ Sum (List.map (exmap fn) xs)
-exmap fn (Subtract xs) = fn $ Subtract (List.map (exmap fn) xs)
-exmap fn (Product xs) = fn $ Product (List.map (exmap fn) xs)
-exmap fn (Divide xs) = fn $ Divide (List.map (exmap fn) xs)
-exmap fn (Power x y) = fn $ Power (exmap fn x) (exmap fn y)
-exmap fn (Logarithm x y) = fn $ Logarithm (exmap fn x) (exmap fn y)
-exmap fn (Absolute x) = fn $ Absolute (exmap fn x)
-exmap fn (Negate y) = fn $ Negate (exmap fn y)
-exmap fn z = fn z
 
 expressionSize :: Expression -> Integer
-expressionSize (Parens x) = expressionSize x
-expressionSize (Negate x) = expressionSize x
-expressionSize (Absolute x) = 1 + expressionSize x
-expressionSize (Sum xs) = foldl (+) 1 $ List.map expressionSize xs
-expressionSize (Subtract xs) = foldl (+) 1 $ List.map expressionSize xs
-expressionSize (Product xs) = foldl (+) 1 $ List.map expressionSize xs
-expressionSize (Divide xs) = foldl (+) 1 $ List.map expressionSize xs
-expressionSize (Power x y) = 1 + expressionSize x + expressionSize y
-expressionSize (Logarithm x y) = 1 + expressionSize x + expressionSize y
-expressionSize _ = 1
+expressionSize (Nullary term) = 1
+expressionSize (Unary operator expr) = 1 + expressionSize expr
+expressionSize (Binary operator leftExpr rightExpr) = sum [1, expressionSize leftExpr, expressionSize rightExpr]
 
 -- solution checkers
 solved :: Expression -> Bool
-solved (Absolute x) = varSolved x
+solved (Unary Absolute x) = varSolved x
 solved x = (constSolved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
-varSolved (Variable x) = singleVariable (Variable x)
-varSolved (Negate (Variable _)) = True
-varSolved (Product [(Variable _), (Constant _)]) = True
-varSolved (Product [(Constant _), (Variable _)]) = True
-varSolved (Product [(Variable _), (Integ _)])    = True
-varSolved (Product [(Integ _), (Variable _)])    = True
-varSolved (Divide [(Variable _), (Constant _)])  = True
-varSolved (Divide [(Constant _), (Variable _)])  = True
-varSolved (Divide [(Variable _), (Integ _)])     = True
-varSolved (Divide [(Integ _), (Variable _)])     = True
-varSolved (Sum [(Variable _), (Constant _)])     = True
-varSolved (Sum [(Constant _), (Variable _)])     = True
-varSolved (Sum [(Variable _), (Integ _)])        = True
-varSolved (Sum [(Integ _), (Variable _)])        = True
-varSolved (Logarithm (Variable str) x)
-          | constSolved x = True
-          | (numberOfVariables (Logarithm (Variable str) x)) == 1 = True
-          | otherwise = False
-varSolved (Logarithm x (Variable str))
-          | constSolved x = True
-          | (numberOfVariables (Logarithm x (Variable str))) == 1 = True
-          | otherwise = False
-varSolved (Power (Variable str) x)
-          | constSolved x = True
-          | (numberOfVariables (Power (Variable str) x)) == 1 = True
-          | otherwise = False
-varSolved (Power x (Variable str))
-          | constSolved x = True
-          | (numberOfVariables (Power x (Variable str))) == 1 = True
-          | otherwise = False
+varSolved (Nullary (Variable x)) = singleVariable (Nullary (Variable x))
+varSolved (Unary op (Nullary (Variable _))) = True
+varSolved (Binary op (Nullary (Variable _)) (Nullary (Constant _))) = True
+varSolved (Binary op (Nullary (Constant _)) (Nullary (Variable _))) = True
+varSolved (Binary op (Nullary (Variable _)) (Nullary (Integ _)))    = True
+varSolved (Binary op (Nullary (Integ _)) (Nullary (Variable _)))    = True
 varSolved _ = False
 
 constSolved :: Expression -> Bool
-constSolved (Constant _) = True
-constSolved (Integ _) = True
+constSolved (Nullary (Constant _)) = True
+constSolved (Nullary (Integ _)) = True
 constSolved _ = False
 
 singleVariable :: Expression -> Bool
-singleVariable (Variable _) = True
+singleVariable (Nullary (Variable _)) = True
 singleVariable _ = False
 
 numberOfVariables :: Expression -> Int
 numberOfVariables expression = length . listOfVariables $ expression
 
 listOfVariables :: Expression -> [String]
-listOfVariables (Variable str) = [str]
-listOfVariables (Absolute x) = listOfVariables x
-listOfVariables (Negate x) = listOfVariables x
-listOfVariables (Product xs) = nub . concatMap listOfVariables $ xs
-listOfVariables (Divide xs) = nub . concatMap listOfVariables $ xs
-listOfVariables (Sum xs) = nub . concatMap listOfVariables $ xs
-listOfVariables (Subtract xs) = nub . concatMap listOfVariables $ xs
-listOfVariables (Logarithm x y) = nub . concatMap listOfVariables $ x:y:[]
-listOfVariables (Power x y) = nub . concatMap listOfVariables $ x:y:[]
+listOfVariables (Nullary (Variable str)) = [str]
+listOfVariables (Unary op x) = listOfVariables x
+listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
 listOfVariables _ = []
 
--- expressionTransformations
+-- helpers
+isNum :: Term -> Bool
+isNum (Integ _) = True
+isNum (Constant _) = True
+isNum x = False
 
-sortExpression :: Expression -> Expression
-sortExpression (Sum xs) = Sum (sort xs)
-sortExpression (Subtract (x:xs)) = Subtract (x:(sort xs))
-sortExpression (Product xs) = Product (sort xs)
-sortExpression (Divide (x:xs)) = Divide (x:(sort xs))
-sortExpression (Power x y) = Power x y
-sortExpression (Logarithm x y) = Logarithm x y
-sortExpression (Absolute x) = Absolute x
-sortExpression (Negate y) = Negate y
-sortExpression z = z
+isZero :: Term -> Bool
+isZero (Integ 0) = True
+isZero (Constant 0.0) = True
+isZero _ = False
+
+isOne :: Term -> Bool
+isOne (Integ 0) = True
+isOne (Constant 0.0) = True
+isOne _ = False
+
+isVariable :: Term -> Bool
+isVariable (Variable _) = True
+isVariable _ = False
+
+isVariableProduct :: Expression -> Bool
+isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
+                  | isVariable x && isNum y = True
+                  | isVariable y && isNum y = True
+isVariableProduct _ = False
+
+-- expressionTransformations
+expressionTransformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
+                            collapseAdd, collapseSub, pop, logify, exponentiate, negatify]
 
 pop :: Expression -> Expression
-pop (Parens x) = x
+pop (Unary Parens x) = x
 pop x = x
 
 multiplyByZero :: Expression -> Expression
-multiplyByZero (Product xs) = if (any (\x -> (x == Constant 0.0) || (x == Integ 0.0)) (List.map multiplyByZero xs)) then Integ 0.0 else (Product xs)
-multiplyByZero xs = xs
+multiplyByZero (Binary Multiply (Nullary x) y) 
+               | isZero x = Nullary (Integ 0)
+               | otherwise = (Binary Multiply (Nullary x) y)
+multiplyByZero (Binary Multiply x (Nullary y)) 
+               | isZero y = Nullary (Integ 0)
+               | otherwise = (Binary Multiply x (Nullary y))
+multiplyByZero x = x
 
 multiplyByOne :: Expression -> Expression
-multiplyByOne (Product xs) = Product (List.filter (\x -> not $ (x == Constant 1.0) || (x == Integ 1.0)) (List.map multiplyByOne xs))
-multiplyByOne xs = xs
+multiplyByOne (Binary Multiply (Nullary x) y) 
+               | isOne x = y
+               | otherwise = (Binary Multiply (Nullary x) y)
+multiplyByOne (Binary Multiply x (Nullary y)) 
+               | isOne y = x
+               | otherwise = (Binary Multiply x (Nullary y))
+multiplyByOne x = x
 
 absolutify :: Expression -> Expression
-absolutify (Absolute (Negate x)) = x
-absolutify (Absolute x) = x
+absolutify (Unary Absolute (Unary Negate x)) = x
+absolutify (Unary Absolute x) = x
 absolutify expression = expression
 
 logify :: Expression -> Expression
-logify (Logarithm x (Product xs)) = Sum (List.map (Logarithm x) xs)
-logify (Logarithm (Constant x) (Constant y)) = Constant (logBase x y)
-logify (Logarithm (Integ x) (Integ y)) = Constant (logBase x y)
-logify (Logarithm (Integ x) (Constant y)) = Constant (logBase x y)
-logify (Logarithm (Constant x) (Integ y)) = Constant (logBase x y)
+logify (Binary Logarithm base (Binary Multiply x y)) = Binary Add (Binary Logarithm base x) (Binary Logarithm base y)
+logify (Binary Logarithm (Nullary (Constant x)) (Nullary (Constant y))) = Nullary (Constant (logBase x y))
+logify (Binary Logarithm (Nullary (Integ x)) (Nullary (Integ y))) = Nullary (Constant (logBase (fromInteger x) (fromInteger y)))
+logify (Binary Logarithm (Nullary (Integ x)) (Nullary (Constant y))) = Nullary (Constant (logBase (fromInteger x) y))
+logify (Binary Logarithm (Nullary (Constant x)) (Nullary (Integ y))) = Nullary (Constant (logBase x (fromInteger y)))
 logify expression = expression
 
 exponentiate :: Expression -> Expression
-exponentiate (Power (Constant x) (Constant y)) = Constant (x ** y)
-exponentiate (Power (Integ x) (Integ y)) = Constant (x ** y)
-exponentiate (Power (Constant x) (Integ y)) = Constant (x ** y)
-exponentiate (Power (Integ x) (Constant y)) = Constant (x ** y)
+exponentiate (Binary Power (Nullary (Constant x)) ((Nullary (Constant y)))) = Nullary (Constant (x ** y))
+exponentiate (Binary Power (Nullary (Integ x)) (Nullary (Integ y))) = Nullary (Constant ((fromInteger x) ** (fromInteger y)))
+exponentiate (Binary Power (Nullary (Constant x)) (Nullary (Integ y))) = Nullary (Constant (x ** (fromInteger y)))
+exponentiate (Binary Power (Nullary (Integ x)) (Nullary (Constant y))) = Nullary (Constant ((fromInteger x) ** y))
 exponentiate expression = expression
 
 negatify :: Expression -> Expression
-negatify (Negate (Constant x)) = (Constant (0-x))
-negatify (Negate (Integ x)) = (Integ (0-x))
+negatify (Unary Negate (Nullary (Constant x))) = (Nullary (Constant (negate x)))
+negatify (Unary Negate (Nullary (Integ x))) = (Nullary (Integ (negate x)))
 negatify x = x
 
 distribute :: Expression -> Expression
-distribute (Product (x:[])) = x
-distribute (Product ((Sum xs):ys)) = Sum (List.map (\x -> Product (x:ys)) xs)
-distribute (Product (x:(Sum ys):zs)) = Sum (List.map (\y -> Product (x:(y:zs))) ys)
+distribute (Binary Multiply (Binary Add x y) z) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
 distribute x = x
 
-squash :: Expression -> Expression
-squash (Sum xs) = squashSum (Sum (List.map squash xs))
-squash (Subtract xs) = squashSubtract (Subtract (List.map squash xs))
-squash (Product xs) = squashProduct (Product (List.map squash xs))
-squash (Divide xs) = squashDivide (Divide (List.map squash xs))
-squash (Logarithm x y) = Logarithm (squash x) (squash y)
-squash (Power x y) = Power (squash x) (squash y)
-squash (Absolute x) = Absolute (squash x)
-squash (Negate x) = Negate (squash x)
-squash (Parens x) = squash x
-squash x = x
+collapseAdd :: Expression -> Expression
+collapseAdd (Binary Add (Nullary x) (Nullary y)) = addTerms x y
+collapseAdd (Binary Add (Nullary (Variable x)) (Binary Multiply y z))
+            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                            ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
+                                                            (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
+                                                            _ -> Binary Add (Nullary (Variable x)) (Binary Multiply y z)
+            | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
+collapseAdd (Binary Add (Binary Multiply y z) (Nullary (Variable x)))
+            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                            ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
+                                                            (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
+                                                            _ -> Binary Add (Binary Multiply y z) (Nullary (Variable x))
+            | otherwise = Binary Add (Binary Multiply y z) (Nullary (Variable x))
+collapseAdd expression = expression
 
-squashSum (Sum (x:[])) = x
-squashSum (Sum ((Sum xs):ys)) = Sum (xs ++ ys)
-squashSum (Sum (x:(Sum xs):ys)) = Sum (x:xs ++ ys)
-squashSum x = x
+collapseSub :: Expression -> Expression
+collapseSub (Binary Subtract (Nullary x) (Nullary y)) = subTerms x y
+collapseSub (Binary Subtract (Nullary (Variable x)) (Binary Multiply y z))
+            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                          ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Subtract z (Nullary (Integ 1)))
+                                                          (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Subtract y (Nullary (Integ 1)))
+                                                          _ -> Binary Subtract (Nullary (Variable x)) (Binary Multiply y z)
+            | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
+collapseSub (Binary Subtract (Binary Multiply y z) (Nullary (Variable x)))
+            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                            ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Subtract z (Nullary (Integ 1)))
+                                                            (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Subtract y (Nullary (Integ 1)))
+                                                            _ -> Binary Subtract (Binary Multiply y z) (Nullary (Variable x))
+            | otherwise = Binary Subtract (Binary Multiply y z) (Nullary (Variable x))
+collapseSub expression = expression
 
-squashProduct (Product (x:[])) = x
-squashProduct (Product ((Product xs):ys)) = Product (xs ++ ys)
-squashProduct (Product (x:(Product xs):ys)) = Product (x:xs ++ ys)
-squashProduct x = x
+collapseMult :: Expression -> Expression
+collapseMult (Binary Multiply (Nullary x) (Nullary y)) = multTerms x y
+collapseMult (Binary Multiply (Nullary (Variable x)) (Binary Multiply y z))
+             | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                             ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
+                                                             (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
+                                                             _ -> Binary Multiply (Nullary (Variable x)) (Binary Multiply y z)
+             | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
+collapseMult (Binary Multiply (Binary Multiply y z) (Nullary (Variable x)))
+             | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                             ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
+                                                             (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
+                                                             _ -> Binary Add (Binary Multiply y z) (Nullary (Variable x))
+             | otherwise = Binary Add (Binary Multiply y z) (Nullary (Variable x))
+collapseMult expression = expression
 
-squashSubtract x = x
-squashDivide x = x
+collapseDiv :: Expression -> Expression
+collapseDiv (Binary Divide (Nullary x) (Nullary y)) = divTerms x y
+collapseDiv (Binary Divide (Nullary (Variable x)) (Binary Divide y z))
+            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                          ((Nullary (Variable var)):tl) -> z
+                                                          (hd:(Nullary (Variable var)):[]) -> Binary Divide (Nullary (Integ 1)) y
+                                                          _ -> Binary Divide (Nullary (Variable x)) (Binary Multiply y z)
+            | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
+collapseDiv (Binary Divide (Binary Multiply y z) (Nullary (Variable x)))
+            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
+                                                            ((Nullary (Variable var)):tl) -> z
+                                                            (hd:(Nullary (Variable var)):[]) -> y
+                                                            _ -> Binary Divide (Binary Multiply y z) (Nullary (Variable x))
+            | otherwise = Binary Divide (Binary Multiply y z) (Nullary (Variable x))
+collapseDiv expression = expression
 
-collapseSum :: Expression -> Expression
-collapseSum (Sum xs) = foldl add (Constant 0) xs
-collapseSum xs = xs
+-- collapse helpers
+addTerms :: Term -> Term -> Expression
+addTerms x y 
+         | isNum x && isNum y = Nullary (addNums x y)
+         | isVariable x && isVariable y && x == y = Binary Multiply (Nullary (Integ 2)) (Nullary x)
+         | otherwise = Binary Add (Nullary x) (Nullary y)
 
-collapseProduct :: Expression -> Expression
-collapseProduct (Product xs) = foldl multiply (Constant 1.0) xs
-collapseProduct xs = xs
+addNums :: Term -> Term -> Term
+addNums (Integ a) (Integ b) = Integ (a + b)
+addNums (Constant x) (Integ y) = (Constant (x + (fromInteger y)))
+addNums (Integ x) (Constant y) = (Constant ((fromInteger x) + y))
 
-collapseDivide :: Expression -> Expression
-collapseDivide (Divide (x:xs)) = foldl divide x xs
-collapseDivide xs = xs
+subTerms :: Term -> Term -> Expression
+subTerms x y 
+         | isNum x && isNum y = Nullary (subNums x y)
+         | isVariable x && isVariable y && x == y = Nullary (Integ 0)
+         | otherwise = Binary Subtract (Nullary x) (Nullary y)
 
-collapseSubtract :: Expression -> Expression
-collapseSubtract (Subtract (x:xs)) = foldl sub x xs
-collapseSubtract xs = xs
+subNums :: Term -> Term -> Term
+subNums (Integ x) (Integ y) = (Integ (x - y))
+subNums (Constant x) (Integ y) = (Constant (x - (fromInteger y)))
+subNums (Integ x) (Constant y) = (Constant ((fromInteger x) - y))
 
-expressionTransformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
-                   collapseSum, collapseSubtract, collapseProduct, collapseDivide, pop, --collapseVariables,
-                   logify, exponentiate, negatify, sortExpression]
--- merging
+multTerms :: Term -> Term -> Expression
+multTerms x y
+          | isNum x && isNum y = Nullary (multNums x y)
+          | isVariable x && isVariable y && x == y = Binary Multiply (Nullary (Integ 2)) (Nullary x)
+          | otherwise = Binary Multiply (Nullary x) (Nullary y)
+          
+multNums :: Term -> Term -> Term
+multNums (Integ x) (Integ y) = (Integ (x * y))
+multNums (Constant x) (Integ y) = (Constant (x * (fromInteger y)))
+multNums (Integ x) (Constant y) = (Constant ((fromInteger x) * y))
 
-add :: Expression -> Expression -> Expression
-add (Constant a) (Constant b) = Constant (a + b)
-add (Variable x) (Variable y) 
-                            | x == y = Product [Integ 2.0, Variable x]
-                            | otherwise = Sum [Variable x, Variable y]
-add (Integ a) (Integ b) = Integ (a + b)
-add (Constant a) (Integ b) = Constant (a + b)
-add (Integ a) (Constant b) = Constant (a + b)
-add (Sum xs) expression = Sum (expression:xs)
-add expression (Sum xs) = Sum (expression:xs)
-add (Constant a) expression = Sum ((Constant a):[expression])
-add expression (Constant a) = Sum ((Constant a):[expression])
-add (Integ a) expression = Sum ((Integ a):[expression])
-add expression (Integ a) = Sum ((Integ a):[expression])
-add expression1 expression2 = Sum [expression1, expression2]
-
-sub :: Expression -> Expression -> Expression
-sub (Variable x) (Variable y) 
-                            | x == y = Integ 0.0
-                            | otherwise = Subtract [Variable x, Variable y]
-sub (Constant a) (Constant b) = Constant (a - b)
-sub (Integ a) (Integ b) = Integ (a - b)
-sub (Constant a) (Integ b) = Constant (a - b)
-sub (Integ a) (Constant b) = Constant (a - b)
-sub (Subtract xs) expression = Subtract (expression:xs)
-sub expression (Sum xs) = Subtract (expression:xs)
-sub (Constant a) expression = Subtract ((Constant a):[expression])
-sub expression (Constant a) = Subtract ((Constant a):[expression])
-sub (Integ a) expression = Subtract ((Integ a):[expression])
-sub expression (Integ a) = Subtract ((Integ a):[expression])
-sub expression1 expression2 = Subtract [expression1, expression2]
-
-myNegate :: Expression -> Expression
-myNegate (Constant num) = Constant (-(num))
-myNegate (Integ num) = Integ (-(num))
-myNegate (Negate expression) = expression
-myNegate expression = Negate expression
-
-multiply :: Expression -> Expression -> Expression
-multiply (Variable x) (Variable y)
-                      | x == y = (Power (Variable x) (Integ 2.0))
-                      | otherwise = Product [Variable x, Variable y]
-multiply (Constant a) (Constant b) = Constant (a * b)
-multiply (Integ a) (Constant b) = Constant (a * b)
-multiply (Constant a) (Integ b) = Constant (a * b)
-multiply (Integ a) (Integ b) = Integ (a * b)
-multiply (Constant a) expression = Product [Constant a, expression]
-multiply (Integ a) expression = Product [Integ a, expression]
-multiply (Product xs) ys = Product (xs ++ [ys])
-multiply xs (Product ys) = Product (xs:ys)
-multiply expression (Constant a) = multiply (Constant a) expression
-multiply expression (Integ a) = multiply (Integ a) expression
-multiply (Negate a) (Negate b) = multiply a b
-multiply (Negate a) expression = Product [Negate a, expression]
-multiply expression1 expression2 = Product [expression1, expression2]
-
-divide :: Expression -> Expression -> Expression
-divide (Variable x) (Variable y)
-                    | x == y = Integ 1.0
-                    | otherwise = Divide [Variable x, Variable y]
-divide (Constant a) (Constant b) = Constant (a / b)
-divide (Integ a) (Constant b) = Constant (a / b)
-divide (Constant a) (Integ b) = Constant (a / b)
-divide (Integ a) (Integ b) = Constant (a / b)
-divide (Constant a) expression = Divide [Constant a, expression]
-divide (Integ a) expression = Divide [Integ a, expression]
-divide (Divide xs) y = Divide (xs ++ [y])
-divide x (Divide (y:ys)) = Divide ((Product ((x:ys)):[y]))
-divide (Negate a) (Negate b) = divide a b
-divide expression1 expression2 = Divide [expression1, expression2]
+divTerms :: Term -> Term -> Expression
+divTerms x y
+         | isNum x && isNum y = Nullary (divNums x y)
+         | isVariable x && isVariable y && x == y = Nullary (Integ 1)
+         | otherwise = Binary Divide (Nullary x) (Nullary y)
+         
+divNums :: Term -> Term -> Term
+divNums (Integ x) (Integ y) = (Constant ((fromInteger x) / (fromInteger y)))
+divNums (Constant x) (Integ y) = (Constant (x / (fromInteger y)))
+divNums (Integ x) (Constant y) = (Constant ((fromInteger x) / y))
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 
 evaluate :: Expression -> Double
-evaluate (Parens expression)          = evaluate expression
-evaluate (Constant value)             = value
-evaluate (Integ value)                = value
-evaluate (Absolute value)             = abs (evaluate value)
-evaluate (Negate expression)          = -(evaluate expression)
-evaluate (Sum expressions)            = foldr ((+) . evaluate) 0 expressions
-evaluate (Subtract expressions)       = foldl (\x y -> x - (evaluate y)) (evaluate . head $ expressions) (tail expressions)
-evaluate (Product expressions)        = foldr ((*) . evaluate) 1 expressions
-evaluate (Divide expressions)         = foldl (\x y -> x / (evaluate y)) (evaluate . head $ expressions) (tail expressions)
-evaluate (Logarithm base expression)  = logBase (evaluate base) (evaluate expression)
-evaluate (Power base expo)            = (evaluate base) ** (evaluate expo)
-evaluate (Variable str) = error "Cannot evaluate a variable"
+evaluate (Unary Parens expression)          = evaluate expression
+evaluate (Nullary (Constant value))             = value
+evaluate (Nullary (Integ value))                = fromInteger value
+evaluate (Unary Absolute value)             = abs (evaluate value)
+evaluate (Unary Negate expression)          = negate (evaluate expression)
+evaluate (Binary Add leftExpr rightExpr)            = evaluate leftExpr + evaluate rightExpr
+evaluate (Binary Subtract leftExpr rightExpr)       = evaluate leftExpr - evaluate rightExpr
+evaluate (Binary Multiply leftExpr rightExpr)        = evaluate leftExpr * evaluate rightExpr
+evaluate (Binary Divide leftExpr rightExpr)         = evaluate leftExpr / evaluate rightExpr
+evaluate (Binary Logarithm base expression)  = logBase (evaluate base) (evaluate expression)
+evaluate (Binary Power  base expo)            = (evaluate base) ** (evaluate expo)
+evaluate (Nullary (Variable str)) = error "Cannot evaluate a variable"

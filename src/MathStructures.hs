@@ -4,6 +4,10 @@ processExpression,
 processEquation,
 printEquation,
 printExpression,
+exmap,
+Term(..),
+UnaryOp(..),
+BinaryOp(..),
 Expression(..),
 Equation(..),
 Solution(..),
@@ -21,30 +25,31 @@ import Text.Parsec.Prim
 import Text.Parsec.Combinator
 
 -- Data structure
-data Term = Var String 
-          | Const Double 
-          | In Integer
+data Term = Variable String 
+          | Constant Double 
+          | Integ Integer
+            deriving (Ord)
           
-data UnaryOp = Neg 
-             | Abs 
-             | Par 
-               deriving Eq
+data UnaryOp = Negate 
+             | Absolute 
+             | Parens 
+               deriving (Eq, Ord)
             
-data BinaryOp = Log 
-              | Pow
-              | Mult 
-              | Div 
+data BinaryOp = Logarithm 
+              | Power
+              | Multiply 
+              | Divide 
               | Add 
-              | Sub
-                deriving Eq
+              | Subtract
+                deriving (Eq, Ord)
             
-data SeqOp = SigmaSum | PiProduct deriving Eq
+data SeqOp = SigmaSum | PiProduct deriving (Eq, Ord)
 
 data Expression = Nullary Term 
           | Unary UnaryOp (Expression) 
           | Binary BinaryOp (Expression) (Expression) 
           | Seq SeqOp [Expression]
-            deriving Eq
+            deriving (Eq, Ord)
 
 data Equation = Equation Expression Expression
 data Solution = Solution (Maybe [Expression]) 
@@ -52,17 +57,17 @@ data SolvedEquation = SolvedEquation (Maybe [Equation])
 
 -- instance declarations
 instance Eq Term where
-  (Var x) == (Var y) = x == y
-  (Const x) == (Const y) = x == y
-  (In x) == (In y) = x == y
-  (In x) == (Const y) = (fromInteger x) == y
-  (Const x) == (In y) = x == (fromInteger y)
+  (Variable x) == (Variable y) = x == y
+  (Constant x) == (Constant y) = x == y
+  (Integ x) == (Integ y) = x == y
+  (Integ x) == (Constant y) = (fromInteger x) == y
+  (Constant x) == (Integ y) = x == (fromInteger y)
   _ == _ = False
   
 instance Show Term where
-  show (Var str) = str
-  show (Const x) = show x
-  show (In x) = show x
+  show (Variable str) = str
+  show (Constant x) = show x
+  show (Integ x) = show x
 
 instance Show Expression where
   show (Nullary term) = show term
@@ -83,22 +88,22 @@ showExpression :: BinaryOp -> Expression -> String
 showExpression _ (Nullary term) = show term
 showExpression _ (Unary operator expr) = showUnary operator expr
 showExpression op (Binary operator leftExpression rightExpression)
-        | op == Pow = parenthesize $ showBinary operator leftExpression rightExpression
+        | op == Power = parenthesize $ showBinary operator leftExpression rightExpression
         | op == operator = showBinary operator leftExpression rightExpression
         | otherwise = parenthesize $ showBinary operator leftExpression rightExpression
 
 showUnary :: UnaryOp -> Expression -> String
-showUnary Neg x = "-" ++ parenthesize (show x)
-showUnary Abs x = around (show x) "|" "|"
-showUnary Par x = parenthesize $ show x
+showUnary Negate x = "-" ++ parenthesize (show x)
+showUnary Absolute x = around (show x) "|" "|"
+showUnary Parens x = parenthesize $ show x
 
 showBinary :: BinaryOp -> Expression -> Expression -> String
 showBinary Add x y = inBetween (showExpression Add x) " + " (showExpression Add y)
-showBinary Sub x y = inBetween (showExpression Sub x) " - " (showExpression Sub y)
-showBinary Mult x y = inBetween (showExpression Mult x) " * " (showExpression Mult y)
-showBinary Div x y = inBetween (showExpression Div x) " / " (showExpression Div y)
-showBinary Log b x = "log" ++ angleBracket (show b) ++ parenthesize (show x)
-showBinary Pow expr expo = inBetween (showExpression Pow expr) "^" (showExpression Pow expo)
+showBinary Subtract x y = inBetween (showExpression Subtract x) " - " (showExpression Subtract y)
+showBinary Multiply x y = inBetween (showExpression Multiply x) " * " (showExpression Multiply y)
+showBinary Divide x y = inBetween (showExpression Divide x) " / " (showExpression Divide y)
+showBinary Logarithm b x = "log" ++ angleBracket (show b) ++ parenthesize (show x)
+showBinary Power expr expo = inBetween (showExpression Power expr) "^" (showExpression Power expo)
 
 showSeq = undefined
 
@@ -133,13 +138,10 @@ processEquation fn inp = case parse eqnparser "" inp of
                          } 
                          
 -- traversal functions
--- exprFold1 :: (Expression -> a) -> Expression -> a
--- exprFold1 fn (Nullary term) = fn $ Nullary term
--- exprFold1 fn (Unary operator expr) = fn $ Unary operator (exprFold1 fn expr)
--- exprFold1 fn (Binary operator leftExpression rightExpression) = fn $ Binary operator (exprFold1 fn leftExpression) (exprFold1 fn rightExpression) 
--- 
--- exprMap :: (Expression -> Expression) -> Expression -> Expression
--- exprMap fn = exprFold1 fn
+exmap :: (Expression -> Expression) -> Expression -> Expression
+exmap fn (Nullary term) = fn $ Nullary term
+exmap fn (Unary operator expr) = fn $ Unary operator (exmap fn expr)
+exmap fn (Binary operator leftExpression rightExpression) = fn $ Binary operator (exmap fn leftExpression) (exmap fn rightExpression) 
 
 -- show helpers 
 
@@ -170,12 +172,12 @@ eqnparser = do { x <- exprparser
 exprparser :: Parser Expression
 exprparser = buildExpressionParser exprTable term <?> "expression"
 
-exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Neg))]
-            , [Infix (m_reservedOp "^" >> return (Binary Pow)) AssocLeft]
-            , [Infix (m_reservedOp "*" >> return (Binary Mult)) AssocLeft]
-            , [Infix (m_reservedOp "/" >> return (Binary Div)) AssocLeft]
+exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Negate))]
+            , [Infix (m_reservedOp "^" >> return (Binary Power)) AssocLeft]
+            , [Infix (m_reservedOp "*" >> return (Binary Multiply)) AssocLeft]
+            , [Infix (m_reservedOp "/" >> return (Binary Divide)) AssocLeft]
             , [Infix (m_reservedOp "+" >> return (Binary Add)) AssocLeft]
-            , [Infix (m_reservedOp "-" >> return (Binary Sub)) AssocLeft]
+            , [Infix (m_reservedOp "-" >> return (Binary Subtract)) AssocLeft]
             ]
              
 term = parenParser
@@ -191,17 +193,17 @@ within open close = do char open
 logParser = do string "log"
                base <- within '<' '>'
                expr <- within '(' ')'
-               return (Binary Log base expr)
+               return (Binary Logarithm base expr)
          
 absParser = do x <- within '|' '|'
-               return (Unary Abs x)
+               return (Unary Absolute x)
 
 parenParser = do x <- m_parens exprparser
-                 return (Unary Par x)
+                 return (Unary Parens x)
                  
-termParser = liftM (Nullary . Var) m_identifier
-             <|> liftM (Nullary . In) m_natural
-             <|> liftM (Nullary . Const) m_float
+termParser = liftM (Nullary . Variable) m_identifier
+             <|> liftM (Nullary . Integ) m_natural
+             <|> liftM (Nullary . Constant) m_float
 
 def = emptyDef{ identStart = letter
               , identLetter = oneOf $ ['1'..'9']
