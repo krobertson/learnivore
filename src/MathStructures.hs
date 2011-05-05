@@ -20,40 +20,54 @@ import Text.Parsec.Language
 import Text.Parsec.Prim
 import Text.Parsec.Combinator
 
--- Data structure for actual calculation
-data Expression = Variable String
-                | Constant Double
-                | Integ Double
-                | Parens Expression
-                | Absolute (Expression)
-                | Negate (Expression)
-                | Sum [Expression]
-                | Subtract [Expression]
-                | Product [Expression]
-                | Divide [Expression]
-                | Power (Expression) (Expression)
-                | Logarithm (Expression) (Expression)
-                  deriving (Eq, Ord)
+-- Data structure
+data Term = Var String 
+          | Const Double 
+          | In Integer
+          
+data UnaryOp = Neg 
+             | Abs 
+             | Par 
+               deriving Eq
+            
+data BinaryOp = Log 
+              | Pow
+              | Mult 
+              | Div 
+              | Add 
+              | Sub
+                deriving Eq
+            
+data SeqOp = SigmaSum | PiProduct deriving Eq
 
-data Equation = Equation {
-  lhs :: Expression,
-  rhs :: Expression
-} deriving (Eq, Ord)
+data Expression = Nullary Term 
+          | Unary UnaryOp (Expression) 
+          | Binary BinaryOp (Expression) (Expression) 
+          | Seq SeqOp [Expression]
+            deriving Eq
 
+data Equation = Equation Expression Expression
 data Solution = Solution (Maybe [Expression]) 
 data SolvedEquation = SolvedEquation (Maybe [Equation])
 
--- Data structures for parsing purposes
-data UnaryOp = Neg | Abs | Par deriving Show
-data BinaryOp = Mult | Div | Add | Sub | Log | Pow deriving Show
-
-data Expr = Var String | Const Double | In Integer | Unary UnaryOp (Expr) | Binary BinaryOp (Expr) (Expr) | Seq [Expr] deriving Show
-data Eqn = Eqn Expr Expr
-
 -- instance declarations
+instance Eq Term where
+  (Var x) == (Var y) = x == y
+  (Const x) == (Const y) = x == y
+  (In x) == (In y) = x == y
+  (In x) == (Const y) = (fromInteger x) == y
+  (Const x) == (In y) = x == (fromInteger y)
+  _ == _ = False
+  
+instance Show Term where
+  show (Var str) = str
+  show (Const x) = show x
+  show (In x) = show x
 
 instance Show Expression where
-  show = showExpression
+  show (Nullary term) = show term
+  show (Unary op expr) = showUnary op expr
+  show (Binary op leftExpression rightExpression) = showBinary op leftExpression rightExpression 
 
 instance Show Solution where
   show = showSolution
@@ -65,24 +79,28 @@ instance Show SolvedEquation where
   show = showSolvedEquation
 
 -- String and print functions
+showExpression :: BinaryOp -> Expression -> String
+showExpression _ (Nullary term) = show term
+showExpression _ (Unary operator expr) = showUnary operator expr
+showExpression op (Binary operator leftExpression rightExpression)
+        | op == Pow = parenthesize $ showBinary operator leftExpression rightExpression
+        | op == operator = showBinary operator leftExpression rightExpression
+        | otherwise = parenthesize $ showBinary operator leftExpression rightExpression
 
-showExpression :: Expression-> String
-showExpression (Product xs) = join " * " (map showExpression' xs)
-showExpression (Divide xs) = join " / " (map showExpression' xs)
-showExpression (Sum xs) = join " + " (map showExpression' xs)
-showExpression (Subtract xs) = join " - " (map showExpression' xs)
-showExpression (Parens x) = parenthesize  $ showExpression x
-showExpression expression = showExpression' expression
+showUnary :: UnaryOp -> Expression -> String
+showUnary Neg x = "-" ++ parenthesize (show x)
+showUnary Abs x = around (show x) "|" "|"
+showUnary Par x = parenthesize $ show x
 
-showExpression' :: Expression -> String
-showExpression' (Variable string) = string
-showExpression' (Constant a) = show a
-showExpression' (Integ a) = show (round a)
-showExpression' (Negate a) = "-" ++ showExpression' a
-showExpression' (Absolute a) = around (showExpression a) "|" "|"
-showExpression' (Power a b) = showExpression' a ++ "^" ++ showExpression' b
-showExpression' (Logarithm base a) = "log" ++ angleBracket (showExpression base) ++ parenthesize (showExpression a)
-showExpression' expression = parenthesize $ showExpression expression
+showBinary :: BinaryOp -> Expression -> Expression -> String
+showBinary Add x y = inBetween (showExpression Add x) " + " (showExpression Add y)
+showBinary Sub x y = inBetween (showExpression Sub x) " - " (showExpression Sub y)
+showBinary Mult x y = inBetween (showExpression Mult x) " * " (showExpression Mult y)
+showBinary Div x y = inBetween (showExpression Div x) " / " (showExpression Div y)
+showBinary Log b x = "log" ++ angleBracket (show b) ++ parenthesize (show x)
+showBinary Pow expr expo = inBetween (showExpression Pow expr) "^" (showExpression Pow expo)
+
+showSeq = undefined
 
 showSolution :: Solution -> String
 showSolution (Solution (Just xs)) = join "\n=>\n" (map show xs)
@@ -95,20 +113,34 @@ showSolvedEquation (SolvedEquation Nothing) = "There is no valid solution"
 printEquation :: String -> IO ()
 printEquation = putStrLn . processEquation id
              
+printExpressionession :: String -> IO ()
+printExpressionession = putStrLn . processExpression id
+
 printExpression :: String -> IO ()
 printExpression = putStrLn . processExpression id
   
 -- parser wrappers
 processExpression :: (Show a) => (Expression -> a) -> String -> String
 processExpression fn inp = case parse exprparser "" inp of
-                         { Left err -> "Not a legitimate Arithmetic Expression: " ++ show err
-                         ; Right ans -> show . fn $ exprToExpression ans
-                         }
+                     { Left err -> "Not a legitimate Arithmetic Expressionession: " ++ show err
+                     ; Right ans -> show . fn $ ans
+                     }
+
 processEquation :: (Show a) => (Equation -> a) -> String -> String
 processEquation fn inp = case parse eqnparser "" inp of
                          { Left err -> show err
-                         ; Right ans -> show . fn $ eqnToEquation ans
+                         ; Right ans -> show . fn $ ans
                          } 
+                         
+-- traversal functions
+-- exprFold1 :: (Expression -> a) -> Expression -> a
+-- exprFold1 fn (Nullary term) = fn $ Nullary term
+-- exprFold1 fn (Unary operator expr) = fn $ Unary operator (exprFold1 fn expr)
+-- exprFold1 fn (Binary operator leftExpression rightExpression) = fn $ Binary operator (exprFold1 fn leftExpression) (exprFold1 fn rightExpression) 
+-- 
+-- exprMap :: (Expression -> Expression) -> Expression -> Expression
+-- exprMap fn = exprFold1 fn
+
 -- show helpers 
 
 printBetween :: (Show a) => String -> [a] -> IO ()
@@ -120,36 +152,22 @@ join str = concat . intersperse str
 around :: String -> String -> String -> String
 around obj start end = start ++ obj ++ end
 
+inBetween :: String -> String -> String -> String
+inBetween left inside right = left ++ inside ++ right
+
 parenthesize x = around x "(" ")"
 angleBracket x = around x "<" ">"  
 
 -- transformation of parsed objects into calculatable objects
 
-exprToExpression :: Expr -> Expression
-exprToExpression (Unary Par x) = Parens (exprToExpression x)
-exprToExpression (Var str) = Variable str
-exprToExpression (Const x) = Constant x
-exprToExpression (In x) = Integ (fromInteger x :: Double)
-exprToExpression (Unary Neg x) = Negate (exprToExpression x)
-exprToExpression (Unary Abs x) = Absolute (exprToExpression x)
-exprToExpression (Binary Pow x y) = Power (exprToExpression x) (exprToExpression y)
-exprToExpression (Binary Mult x y) = Product [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Binary Div x y) = Divide [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Binary Add x y) = Sum [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Binary Sub x y) = Subtract [(exprToExpression x), (exprToExpression y)]
-exprToExpression (Binary Log b x) = Logarithm (exprToExpression b) (exprToExpression x)
-
-eqnToEquation :: Eqn -> Equation
-eqnToEquation (Eqn expr1 expr2) = (Equation (exprToExpression expr1) (exprToExpression expr2))
-
 -- parsers
-eqnparser :: Parser Eqn
+eqnparser :: Parser Equation
 eqnparser = do { x <- exprparser
                ; string "="
                ; y <- exprparser
-              ; return (Eqn x y)}
+              ; return (Equation x y)}
 
-exprparser :: Parser Expr
+exprparser :: Parser Expression
 exprparser = buildExpressionParser exprTable term <?> "expression"
 
 exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Neg))]
@@ -181,9 +199,9 @@ absParser = do x <- within '|' '|'
 parenParser = do x <- m_parens exprparser
                  return (Unary Par x)
                  
-termParser = liftM Var m_identifier
-             <|> liftM In (m_natural)
-             <|> liftM Const m_float
+termParser = liftM (Nullary . Var) m_identifier
+             <|> liftM (Nullary . In) m_natural
+             <|> liftM (Nullary . Const) m_float
 
 def = emptyDef{ identStart = letter
               , identLetter = oneOf $ ['1'..'9']
