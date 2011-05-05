@@ -56,63 +56,52 @@ equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
 
 -- Equation Transformations
 
-equationTransformations = [isolateVarByMult, isolateVarBySum, 
-                     splitProduct, splitDivide, splitSum, splitSubtract, 
-                     splitPower, splitLogarithm
-                    ] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
+equationTransformations = [splitMultiply, splitDivide, splitAdd, splitSubtract, 
+                          splitPower, splitLogarithm] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
 
   -- (lifted expression transformations)
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) expressionTransformations
 rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (exmap fn rhs)) expressionTransformations
 
-isolateVarByMult :: Equation -> Equation
-isolateVarByMult (Equation (Product xs) rhs) = case sort xs of (Variable str):xs -> Equation (Variable str) (Divide (rhs:[Product xs]))
-                                                               _ -> Equation (Product xs) rhs
-isolateVarByMult equation = equation
-
-isolateVarBySum :: Equation -> Equation
-isolateVarBySum (Equation (Sum ((Variable str):xs)) rhs) = Equation (Variable str) (Subtract (rhs:[Sum xs]))
-isolateVarBySum equation = equation
-
-splitProduct :: Equation -> Equation
-splitProduct (Equation (Product (x:xs)) rhs) = Equation x (Divide (rhs:xs))
-splitProduct (Equation lhs (Product (x:xs))) = Equation (Divide (lhs:xs)) x
-splitProduct equation = equation
+splitMultiply :: Equation -> Equation
+splitMultiply (Equation (Binary Multiply x y) rhs) = Equation x (Binary Divide rhs y)
+splitMultiply (Equation lhs (Binary Multiply x y)) = Equation (Binary Divide lhs y) x
+splitMultiply equation = equation
 
 splitDivide :: Equation -> Equation
-splitDivide (Equation (Divide (x:xs)) rhs) = Equation x (Product (rhs:xs))
-splitDivide (Equation lhs (Divide (x:xs))) = Equation (Product (lhs:xs)) x
+splitDivide (Equation (Binary Divide x y) rhs) = Equation x (Binary Multiply rhs y)
+splitDivide (Equation lhs (Binary Divide x y)) = Equation (Binary Multiply lhs y) x
 splitDivide equation = equation
 
-splitSum :: Equation -> Equation
-splitSum (Equation (Sum (x:xs)) rhs) = Equation x (Subtract (rhs:xs))
-splitSum (Equation lhs (Sum (x:xs))) = Equation (Subtract (lhs:xs)) x
-splitSum equation = equation
+splitAdd :: Equation -> Equation
+splitAdd (Equation (Binary Add x y) rhs) = Equation x (Binary Subtract rhs y)
+splitAdd (Equation lhs (Binary Add x y)) = Equation (Binary Subtract lhs y) x
+splitAdd equation = equation
 
 splitSubtract :: Equation -> Equation
-splitSubtract (Equation (Subtract (x:xs)) rhs) = Equation x (Sum (rhs:xs))
-splitSubtract (Equation lhs (Subtract (x:xs))) = Equation (Sum (lhs:xs)) x
+splitSubtract (Equation (Binary Subtract x y) rhs) = Equation x (Binary Add rhs y)
+splitSubtract (Equation lhs (Binary Subtract x y)) = Equation (Binary Add lhs y) x
 splitSubtract equation = equation
 
 splitPower :: Equation -> Equation
-splitPower (Equation (Power x expo) rhs) = Equation expo (Logarithm x rhs)
-splitPower (Equation lhs (Power x expo)) = Equation (Logarithm x lhs) expo
+splitPower (Equation (Binary Power x expo) rhs) = Equation expo (Binary Logarithm x rhs)
+splitPower (Equation lhs (Binary Power x expo)) = Equation (Binary Logarithm x lhs) expo
 splitPower equation = equation
 
 splitLogarithm :: Equation -> Equation
-splitLogarithm (Equation (Logarithm b x) rhs) = Equation x (Power b rhs)
-splitLogarithm (Equation lhs (Logarithm b x)) = Equation (Power b lhs) x
+splitLogarithm (Equation (Binary Logarithm b x) rhs) = Equation x (Binary Power b rhs)
+splitLogarithm (Equation lhs (Binary Logarithm b x)) = Equation (Binary Power b lhs) x
 splitLogarithm equation = equation
 
 -- splitLogarithm :: Equation -> Equation
--- splitLogarithm (Equation (Logarithm base expr) rhs) = Equation x (Subtract (rhs:xs))
--- splitLogarithm (Equation lhs (Logarithm base expr) = Equation (Subtract (lhs:xs)) x
+-- splitLogarithm (Equation (Binary Logarithm base expr) rhs) = Equation x (Binary Subtract (rhs:xs))
+-- splitLogarithm (Equation lhs (Binary Logarithm base expr) = Equation (Binary Subtract (lhs:xs)) x
 -- splitLogarithm equation = equation
 
 -- Validity
 valid :: Equation -> Bool
-valid (Equation (Variable _) (Constant _)) = True
-valid (Equation (Variable _) (Integ _)) = True
+valid (Equation (Nullary (Variable _)) (Nullary (Constant _))) = True
+valid (Equation (Nullary (Variable _)) (Nullary (Integ _))) = True
 valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)
 
 validSolution :: SolvedEquation -> Bool

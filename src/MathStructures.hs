@@ -51,7 +51,7 @@ data Expression = Nullary Term
           | Seq SeqOp [Expression]
             deriving (Eq, Ord)
 
-data Equation = Equation Expression Expression
+data Equation = Equation Expression Expression deriving (Eq, Ord)
 data Solution = Solution (Maybe [Expression]) 
 data SolvedEquation = SolvedEquation (Maybe [Equation])
 
