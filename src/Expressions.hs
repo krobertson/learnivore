@@ -232,47 +232,51 @@ collapseDiv expression = expression
 -- collapse helpers
 addTerms :: Term -> Term -> Expression
 addTerms x y 
-         | isNum x && isNum y = Nullary (addNums x y)
+         | isNum x && isNum y = addNums x y
          | isVariable x && isVariable y && x == y = Binary Multiply (Nullary (Integ 2)) (Nullary x)
          | otherwise = Binary Add (Nullary x) (Nullary y)
 
-addNums :: Term -> Term -> Term
-addNums (Integ a) (Integ b) = Integ (a + b)
-addNums (Constant x) (Integ y) = (Constant (x + (fromInteger y)))
-addNums (Integ x) (Constant y) = (Constant ((fromInteger x) + y))
+addNums :: Term -> Term -> Expression
+addNums (Integ a) (Integ b) = Nullary (Integ (a + b))
+addNums (Constant x) (Integ y) = Nullary (Constant (x + (fromInteger y)))
+addNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) + y))
+addNums x y = Binary Add (Nullary x) (Nullary y)
 
 subTerms :: Term -> Term -> Expression
 subTerms x y 
-         | isNum x && isNum y = Nullary (subNums x y)
+         | isNum x && isNum y = subNums x y
          | isVariable x && isVariable y && x == y = Nullary (Integ 0)
          | otherwise = Binary Subtract (Nullary x) (Nullary y)
 
-subNums :: Term -> Term -> Term
-subNums (Integ x) (Integ y) = (Integ (x - y))
-subNums (Constant x) (Integ y) = (Constant (x - (fromInteger y)))
-subNums (Integ x) (Constant y) = (Constant ((fromInteger x) - y))
+subNums :: Term -> Term -> Expression
+subNums (Integ x) (Integ y) = Nullary (Integ (x - y))
+subNums (Constant x) (Integ y) = Nullary (Constant (x - (fromInteger y)))
+subNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) - y))
+subNums x y = Binary Subtract (Nullary x) (Nullary y)
 
 multTerms :: Term -> Term -> Expression
 multTerms x y
-          | isNum x && isNum y = Nullary (multNums x y)
+          | isNum x && isNum y = multNums x y
           | isVariable x && isVariable y && x == y = Binary Multiply (Nullary (Integ 2)) (Nullary x)
           | otherwise = Binary Multiply (Nullary x) (Nullary y)
           
-multNums :: Term -> Term -> Term
-multNums (Integ x) (Integ y) = (Integ (x * y))
-multNums (Constant x) (Integ y) = (Constant (x * (fromInteger y)))
-multNums (Integ x) (Constant y) = (Constant ((fromInteger x) * y))
+multNums :: Term -> Term -> Expression
+multNums (Integ x) (Integ y) = Nullary (Integ (x * y))
+multNums (Constant x) (Integ y) = Nullary (Constant (x * (fromInteger y)))
+multNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) * y))
+multNums x y = Binary Multiply (Nullary x) (Nullary y)
 
 divTerms :: Term -> Term -> Expression
 divTerms x y
-         | isNum x && isNum y = Nullary (divNums x y)
+         | isNum x && isNum y = divNums x y
          | isVariable x && isVariable y && x == y = Nullary (Integ 1)
          | otherwise = Binary Divide (Nullary x) (Nullary y)
          
-divNums :: Term -> Term -> Term
-divNums (Integ x) (Integ y) = (Constant ((fromInteger x) / (fromInteger y)))
-divNums (Constant x) (Integ y) = (Constant (x / (fromInteger y)))
-divNums (Integ x) (Constant y) = (Constant ((fromInteger x) / y))
+divNums :: Term -> Term -> Expression
+divNums (Integ x) (Integ y) = Nullary (Constant ((fromInteger x) / (fromInteger y)))
+divNums (Constant x) (Integ y) = Nullary (Constant (x / (fromInteger y)))
+divNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) / y))
+divNums x y = Binary Divide (Nullary x) (Nullary y)
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 

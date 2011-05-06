@@ -34,7 +34,8 @@ Executable learnivore
     containers,
     haskell98,
     utf8-string,
-    bytestring >= 0.9.1 && < 0.10
+    bytestring >= 0.9.1 && < 0.10,
+    random
 
   extensions: TypeSynonymInstances MultiParamTypeClasses
 
