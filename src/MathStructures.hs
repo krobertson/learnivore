@@ -68,6 +68,14 @@ instance Show Term where
   show (Variable str) = str
   show (Constant x) = show x
   show (Integ x) = show x
+  
+instance Show BinaryOp where
+  show Add = " + "
+  show Subtract = " - "
+  show Multiply = " * "
+  show Divide = " / "
+  show Power = "^"
+  show Logarithm = "log"
 
 instance Show Expression where
   show (Nullary term) = show term
@@ -98,12 +106,8 @@ showUnary Absolute x = around (show x) "|" "|"
 showUnary Parens x = parenthesize $ show x
 
 showBinary :: BinaryOp -> Expression -> Expression -> String
-showBinary Add x y = inBetween (showExpression Add x) " + " (showExpression Add y)
-showBinary Subtract x y = inBetween (showExpression Subtract x) " - " (showExpression Subtract y)
-showBinary Multiply x y = inBetween (showExpression Multiply x) " * " (showExpression Multiply y)
-showBinary Divide x y = inBetween (showExpression Divide x) " / " (showExpression Divide y)
 showBinary Logarithm b x = "log" ++ angleBracket (show b) ++ parenthesize (show x)
-showBinary Power expr expo = inBetween (showExpression Power expr) "^" (showExpression Power expo)
+showBinary op x y = inBetween (showExpression op x) (show op) (showExpression op y)
 
 showSeq = undefined
 
