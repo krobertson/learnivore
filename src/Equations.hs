@@ -65,31 +65,17 @@ equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
 -- Equation Transformations
 
 equationTransformations = [splitMultiply, splitDivide, splitAdd, splitSubtract, 
-                          splitPower, splitLogarithm] ++ lhsExpressionTransformations ++ rhsExpressionTransformations
+                          splitPower, splitLogarithm, addToRight, addToLeft, multToRight, multToLeft] ++ 
+                          lhsExpressionTransformations ++ rhsExpressionTransformations
 
   -- (lifted expression transformations)
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) expressionTransformations
 rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (exmap fn rhs)) expressionTransformations
 
-splitMultiply :: Equation -> Equation
-splitMultiply (Equation (Binary Multiply x y) rhs) = Equation x (Binary Divide rhs y)
-splitMultiply (Equation lhs (Binary Multiply x y)) = Equation (Binary Divide lhs y) x
-splitMultiply equation = equation
-
-splitDivide :: Equation -> Equation
-splitDivide (Equation (Binary Divide x y) rhs) = Equation x (Binary Multiply rhs y)
-splitDivide (Equation lhs (Binary Divide x y)) = Equation (Binary Multiply lhs y) x
-splitDivide equation = equation
-
-splitAdd :: Equation -> Equation
-splitAdd (Equation (Binary Add x y) rhs) = Equation x (Binary Subtract rhs y)
-splitAdd (Equation lhs (Binary Add x y)) = Equation (Binary Subtract lhs y) x
-splitAdd equation = equation
-
-splitSubtract :: Equation -> Equation
-splitSubtract (Equation (Binary Subtract x y) rhs) = Equation x (Binary Add rhs y)
-splitSubtract (Equation lhs (Binary Subtract x y)) = Equation (Binary Add lhs y) x
-splitSubtract equation = equation
+splitMultiply = invert Multiply Divide
+splitDivide = invert Divide Multiply
+splitAdd = invert Add Subtract
+splitSubtract = invert Subtract Add
 
 splitPower :: Equation -> Equation
 splitPower (Equation (Binary Power x expo) rhs) = Equation expo (Binary Logarithm x rhs)
@@ -101,10 +87,28 @@ splitLogarithm (Equation (Binary Logarithm b x) rhs) = Equation x (Binary Power 
 splitLogarithm (Equation lhs (Binary Logarithm b x)) = Equation (Binary Power b lhs) x
 splitLogarithm equation = equation
 
--- splitLogarithm :: Equation -> Equation
--- splitLogarithm (Equation (Binary Logarithm base expr) rhs) = Equation x (Binary Subtract (rhs:xs))
--- splitLogarithm (Equation lhs (Binary Logarithm base expr) = Equation (Binary Subtract (lhs:xs)) x
--- splitLogarithm equation = equation
+-- splitPower = invert Power Logarithm
+-- splitLogarithm = invert Logarithm Power
+
+addToRight = toRight Add (Nullary (Integ 0))
+addToLeft = toLeft Add (Nullary (Integ 0))
+multToRight = toRight Add (Nullary (Integ 1))
+multToLeft = toLeft Add (Nullary (Integ 1))
+
+invert :: BinaryOp -> BinaryOp -> Equation -> Equation
+invert op inverse (Equation (Binary op2 x y) rhs)
+       | op == op2 = Equation x (Binary inverse rhs y)
+       | otherwise = Equation (Binary op2 x y) rhs
+invert op inverse (Equation lhs (Binary op2 x y))
+       | op == op2 = Equation (Binary inverse lhs y) x
+       | otherwise = Equation lhs (Binary op2 x y)
+invert _ _ eqn = eqn
+
+toRight :: BinaryOp -> Expression -> Equation -> Equation
+toRight op unit (Equation lhs rhs) = (Equation unit (Binary op rhs lhs))
+
+toLeft :: BinaryOp -> Expression -> Equation -> Equation
+toLeft op unit (Equation lhs rhs) = (Equation (Binary op lhs rhs) unit)
 
 -- Validity
 valid :: Equation -> Bool

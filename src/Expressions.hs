@@ -69,7 +69,7 @@ varSolved :: Expression -> Bool
 varSolved (Nullary (Variable x)) = True
 varSolved (Unary _ (Nullary (Variable _))) = True
 varSolved (Binary _ x y)
-          | isVariable x && isVariable y && x /= y = False
+          | isVarExpr x && isVarExpr y && x /= y = False
           | isTerm x && isTerm y= True
           | otherwise = False
 varSolved _ = False
@@ -77,11 +77,11 @@ varSolved _ = False
 constSolved :: Expression -> Bool
 constSolved (Nullary (Constant _)) = True
 constSolved (Nullary (Integ _)) = True
-constSolved _ = Fals
+constSolved _ = False
 
 -- helpers
-either :: (Expression -> Bool) -> Expression -> Expression -> Bool
-either fn x y = fn x || fn y
+eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
+eitherOr fn x y = fn x || fn y
 
 isNum :: Term -> Bool
 isNum (Integ _) = True
@@ -94,8 +94,8 @@ isZero (Constant 0.0) = True
 isZero _ = False
 
 isOne :: Term -> Bool
-isOne (Integ 0) = True
-isOne (Constant 0.0) = True
+isOne (Integ 1) = True
+isOne (Constant 1.0) = True
 isOne _ = False
 
 isVariable :: Term -> Bool
@@ -106,9 +106,18 @@ isTerm :: Expression -> Bool
 isTerm (Nullary _) = True
 isTerm _ = False
 
+exprIs :: (Term -> Bool) -> Expression -> Bool
+exprIs fn (Nullary x) = fn x
+exprIs _ _ = False
+
 isZeroExpr :: Expression -> Bool
-isZeroExpr (Nullary x) = isZero x
-isZeroExpr _ = False
+isZeroExpr = exprIs isZero
+
+isOneExpr :: Expression -> Bool
+isOneExpr = exprIs isOne
+
+isVarExpr :: Expression -> Bool
+isVarExpr = exprIs isVariable
 
 isVariableProduct :: Expression -> Bool
 isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
@@ -146,8 +155,8 @@ multiplyByZero x = x
 
 multiplyByOne :: Expression -> Expression
 multiplyByOne (Binary Multiply x y) 
-               | either isOneExpr x y && isOne x = y
-               | either isOneExpr x y &7 isOne y = x
+               | eitherOr isOneExpr x y && isOneExpr x = y
+               | eitherOr isOneExpr x y && isOneExpr y = x
                | otherwise = (Binary Multiply x y)
 multiplyByOne x = x
 
