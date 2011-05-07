@@ -66,33 +66,23 @@ solved (Unary Absolute x) = varSolved x
 solved x = (constSolved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
-varSolved (Nullary (Variable x)) = singleVariable (Nullary (Variable x))
-varSolved (Unary op (Nullary (Variable _))) = True
-varSolved (Binary op (Nullary (Variable _)) (Nullary (Constant _))) = True
-varSolved (Binary op (Nullary (Constant _)) (Nullary (Variable _))) = True
-varSolved (Binary op (Nullary (Variable _)) (Nullary (Integ _)))    = True
-varSolved (Binary op (Nullary (Integ _)) (Nullary (Variable _)))    = True
+varSolved (Nullary (Variable x)) = True
+varSolved (Unary _ (Nullary (Variable _))) = True
+varSolved (Binary _ x y)
+          | isVariable x && isVariable y && x /= y = False
+          | isTerm x && isTerm y= True
+          | otherwise = False
 varSolved _ = False
 
 constSolved :: Expression -> Bool
 constSolved (Nullary (Constant _)) = True
 constSolved (Nullary (Integ _)) = True
-constSolved _ = False
-
-singleVariable :: Expression -> Bool
-singleVariable (Nullary (Variable _)) = True
-singleVariable _ = False
-
-numberOfVariables :: Expression -> Int
-numberOfVariables expression = length . listOfVariables $ expression
-
-listOfVariables :: Expression -> [String]
-listOfVariables (Nullary (Variable str)) = [str]
-listOfVariables (Unary op x) = listOfVariables x
-listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
-listOfVariables _ = []
+constSolved _ = Fals
 
 -- helpers
+either :: (Expression -> Bool) -> Expression -> Expression -> Bool
+either fn x y = fn x || fn y
+
 isNum :: Term -> Bool
 isNum (Integ _) = True
 isNum (Constant _) = True
@@ -116,11 +106,28 @@ isTerm :: Expression -> Bool
 isTerm (Nullary _) = True
 isTerm _ = False
 
+isZeroExpr :: Expression -> Bool
+isZeroExpr (Nullary x) = isZero x
+isZeroExpr _ = False
+
 isVariableProduct :: Expression -> Bool
 isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
                   | isVariable x && isNum y = True
                   | isVariable y && isNum y = True
 isVariableProduct _ = False
+
+singleVariable :: Expression -> Bool
+singleVariable (Nullary (Variable _)) = True
+singleVariable _ = False
+
+numberOfVariables :: Expression -> Int
+numberOfVariables expression = length . listOfVariables $ expression
+
+listOfVariables :: Expression -> [String]
+listOfVariables (Nullary (Variable str)) = [str]
+listOfVariables (Unary op x) = listOfVariables x
+listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
+listOfVariables _ = []
 
 -- expressionTransformations
 expressionTransformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
@@ -132,21 +139,16 @@ pop (Unary Parens x) = x
 pop x = x
 
 multiplyByZero :: Expression -> Expression
-multiplyByZero (Binary Multiply (Nullary x) y) 
-               | isZero x = Nullary (Integ 0)
-               | otherwise = (Binary Multiply (Nullary x) y)
-multiplyByZero (Binary Multiply x (Nullary y)) 
-               | isZero y = Nullary (Integ 0)
-               | otherwise = (Binary Multiply x (Nullary y))
+multiplyByZero (Binary Multiply x y) 
+               | isZeroExpr x || isZeroExpr y = Nullary (Integ 0)
+               | otherwise = (Binary Multiply x y)
 multiplyByZero x = x
 
 multiplyByOne :: Expression -> Expression
-multiplyByOne (Binary Multiply (Nullary x) y) 
-               | isOne x = y
-               | otherwise = (Binary Multiply (Nullary x) y)
-multiplyByOne (Binary Multiply x (Nullary y)) 
-               | isOne y = x
-               | otherwise = (Binary Multiply x (Nullary y))
+multiplyByOne (Binary Multiply x y) 
+               | either isOneExpr x y && isOne x = y
+               | either isOneExpr x y &7 isOne y = x
+               | otherwise = (Binary Multiply x y)
 multiplyByOne x = x
 
 absolutify :: Expression -> Expression
