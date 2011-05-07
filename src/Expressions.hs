@@ -190,6 +190,27 @@ applyLog  = applyBinOp Logarithm logTerms
 applyPow  = applyBinOp Power powTerms
 
 -- apply helpers
+forNums :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
+forNums _ fn (Integ a) (Integ b) = Nullary (Constant (fn (fromInteger a) (fromInteger b)))
+forNums _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
+forNums _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
+forNums op _ x y = Binary op (Nullary x) (Nullary y)
+
+forVars :: BinaryOp -> (Term -> Expression) -> Term -> Term -> Expression
+forVars op fn (Variable x) (Variable y) 
+        | x == y = fn (Variable x)
+        | otherwise = Binary op (Nullary (Variable x)) (Nullary (Variable y)) 
+forVars op _ x y = Binary op (Nullary x) (Nullary y)
+
+forTerms numFn varFn x y
+         | isNum x && isNum y = numFn x y
+         | otherwise = varFn x y
+
+applyBinOp op fn (Binary op2 (Nullary x) (Nullary y)) 
+      | op == op2 = fn x y
+      | otherwise = Binary op2 (Nullary x) (Nullary y) 
+applyBinOp _ _ x = x
+
 addTerms = forTerms addNums addVars
 subTerms = forTerms subNums subVars
 multTerms = forTerms multNums multVars
@@ -210,27 +231,6 @@ multNums = forNums Multiply (*)
 divNums = forNums Divide (/)
 powNums = forNums Power (**)
 logNums = forNums Logarithm (logBase)
-
-forNums :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
-forNums _ fn (Integ a) (Integ b) = Nullary (Integ (round (fn (fromInteger a) (fromInteger b))))
-forNums _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
-forNums _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
-forNums op _ x y = Binary op (Nullary x) (Nullary y)
-
-forVars :: BinaryOp -> (Term -> Expression) -> Term -> Term -> Expression
-forVars op fn (Variable x) (Variable y) 
-        | x == y = fn (Variable x)
-        | otherwise = Binary op (Nullary (Variable x)) (Nullary (Variable y)) 
-forVars op _ x y = Binary op (Nullary x) (Nullary y)
-
-forTerms numFn varFn x y
-         | isNum x && isNum y = numFn x y
-         | otherwise = varFn x y
-
-applyBinOp op fn (Binary op2 (Nullary x) (Nullary y)) 
-      | op == op2 = fn x y
-      | otherwise = Binary op2 (Nullary x) (Nullary y) 
-applyBinOp _ _ x = x
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 

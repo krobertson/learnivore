@@ -60,12 +60,12 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                 else []
                               
 equationSize :: Equation -> Integer
-equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
+equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
 
 -- Equation Transformations
 
 equationTransformations = [splitMultiply, splitDivide, splitAdd, splitSubtract, 
-                          splitPower, splitLogarithm, addToRight, addToLeft, multToRight, multToLeft] ++ 
+                          splitPower, splitLogarithm, subFromLeft, subFromRight, divFromLeft, divFromRight] ++ 
                           lhsExpressionTransformations ++ rhsExpressionTransformations
 
   -- (lifted expression transformations)
@@ -90,10 +90,10 @@ splitLogarithm equation = equation
 -- splitPower = invert Power Logarithm
 -- splitLogarithm = invert Logarithm Power
 
-addToRight = toRight Add (Nullary (Integ 0))
-addToLeft = toLeft Add (Nullary (Integ 0))
-multToRight = toRight Add (Nullary (Integ 1))
-multToLeft = toLeft Add (Nullary (Integ 1))
+subFromLeft = toRight Subtract (Nullary (Integ 0))
+subFromRight = toLeft Subtract (Nullary (Integ 0))
+divFromLeft = toRight Divide (Nullary (Integ 1))
+divFromRight = toLeft Multiply (Nullary (Integ 1))
 
 invert :: BinaryOp -> BinaryOp -> Equation -> Equation
 invert op inverse (Equation (Binary op2 x y) rhs)
