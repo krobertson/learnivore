@@ -34,11 +34,11 @@ solveExpression :: String -> String
 solveExpression = processExpression (show . solve)
 
 exprSolution :: String -> String
-exprSolution = processExpression getSolution
+exprSolution = processExpression getExprSolution
 
-getSolution x = case (solve x) of
-                     Solution (Just sol) -> show (last sol)
-                     Solution (Nothing) -> "No Solution"
+getExprSolution x = case (solve x) of
+                         Solution (Just sol) -> show (last sol)
+                         Solution (Nothing) -> "No Solution"
 
 printSolvedExpression :: String -> IO ()
 printSolvedExpression = putStrLn . solveExpression
