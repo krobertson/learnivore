@@ -120,25 +120,25 @@ showSolvedEquation (SolvedEquation (Just xs)) = join "\n=>\n" (map show xs)
 showSolvedEquation (SolvedEquation Nothing) = "There is no valid solution"
 
 printEquation :: String -> IO ()
-printEquation = putStrLn . processEquation id
+printEquation = putStrLn . processEquation (show . id)
              
 printExpressionession :: String -> IO ()
-printExpressionession = putStrLn . processExpression id
+printExpressionession = putStrLn . processExpression (show . id)
 
 printExpression :: String -> IO ()
-printExpression = putStrLn . processExpression id
+printExpression = putStrLn . processExpression (show . id)
   
 -- parser wrappers
-processExpression :: (Show a) => (Expression -> a) -> String -> String
+processExpression :: (Expression -> String) -> String -> String
 processExpression fn inp = case parse exprparser "" inp of
                      { Left err -> "Not a legitimate Arithmetic Expressionession: " ++ show err
-                     ; Right ans -> show . fn $ ans
+                     ; Right ans -> fn $ ans
                      }
 
-processEquation :: (Show a) => (Equation -> a) -> String -> String
+processEquation :: (Equation -> String) -> String -> String
 processEquation fn inp = case parse eqnparser "" inp of
                          { Left err -> show err
-                         ; Right ans -> show . fn $ ans
+                         ; Right ans -> fn $ ans
                          } 
                          
 -- traversal functions

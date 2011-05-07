@@ -1,5 +1,6 @@
 module Expressions
 (
+exprSolution,
 solve,
 evaluate,
 expressionSize,
@@ -30,7 +31,14 @@ solve expression = Solution (case solutionPath of (Just path) -> Just (expressio
   
 
 solveExpression :: String -> String
-solveExpression = processExpression solve
+solveExpression = processExpression (show . solve)
+
+exprSolution :: String -> String
+exprSolution = processExpression getSolution
+
+getSolution x = case (solve x) of
+                     Solution (Just sol) -> show (last sol)
+                     Solution (Nothing) -> "No Solution"
 
 printSolvedExpression :: String -> IO ()
 printSolvedExpression = putStrLn . solveExpression

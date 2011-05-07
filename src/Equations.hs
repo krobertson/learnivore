@@ -16,7 +16,15 @@ import MathStructures
 import Expressions
 
 solveEquation :: String -> String
-solveEquation = processEquation solveEq
+solveEquation = processEquation (show . solveEq)
+
+eqnSolution :: String -> String
+eqnSolution = processEquation getEqnSolution
+
+getEqnSolution :: Equation -> String
+getEqnSolution x = case (solveEq x) of
+                        SolvedEquation (Just sol) -> show (last sol)
+                        SolvedEquation (Nothing) -> "No Solution"
 
 printSolvedEquation :: String -> IO ()
 printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ ans
