@@ -21,7 +21,7 @@ main = runTestTT $ expressionTests
 -- 
 expressionTests = TestLabel "Expression Simplification Tests" (TestList [arithmeticTests, preAlgebraTests])
 -- 
-arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult])--, tDiv, tLog, tPow, tAbs, tNeg])
+arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tLog, tPow, tAbs, tNeg])
 
 preAlgebraTests = TestLabel "Algebra Tests" (TestList [])
 
@@ -34,15 +34,40 @@ preAlgebraTests = TestLabel "Algebra Tests" (TestList [])
 
 tAdd = TestCase $ assertEqual
           "should add two integers"
-          "1 + 1\n=>\n2" $
-          solveExpression "1 + 1"
+          "2" $
+          exprSolution "1 + 1"
           
 tSub = TestCase $ assertEqual
           "should subtract two integers"
-          "1 - 1\n=>\n0" $
-          solveExpression "1 - 1"
+          "0" $
+          exprSolution  "1 - 1"
           
 tMult = TestCase $ assertEqual
-          "should subtract two integers"
-          "1 * 2\n=>\n2" $
-          solveExpression "1 * 1"
+          "should multiply two integers"
+          "6" $
+          exprSolution  "2 * 3"
+          
+tDiv = TestCase $ assertEqual
+          "should multiply two integers"
+          "2" $
+          exprSolution  "4 / 2"
+          
+tPow = TestCase $ assertEqual
+          "should exponentiate two integers"
+          "8" $
+          exprSolution  "2 ^ 3"
+          
+tLog = TestCase $ assertEqual
+          "should log two integers"
+          "2" $
+          exprSolution  "log<2>(4)"
+          
+tAbs = TestCase $ assertEqual
+          "should multiply two integers"
+          "6" $
+          exprSolution  "|-6|"
+          
+tNeg = TestCase $ assertEqual
+          "should multiply two integers"
+          "-5" $
+          exprSolution  "-(3 + 2)"
