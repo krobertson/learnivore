@@ -139,13 +139,20 @@ listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
 listOfVariables _ = []
 
 -- expressionTransformations
-expressionTransformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
+expressionTransformations = [absolutify, addZero, multiplyByZero, multiplyByOne, distribute, 
                             applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow, 
                             pop, negatify]
 
 pop :: Expression -> Expression
 pop (Unary Parens x) = x
 pop x = x
+
+addZero :: Expression -> Expression
+addZero (Binary Add x y) 
+        | isZeroExpr x = y
+        | isZeroExpr y = x
+        | otherwise = (Binary Add x y)
+addZero x = x
 
 multiplyByZero :: Expression -> Expression
 multiplyByZero (Binary Multiply x y) 
