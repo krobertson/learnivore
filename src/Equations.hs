@@ -64,45 +64,57 @@ equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
 
 -- Equation Transformations
 
-equationTransformations = [splitMultiply, splitDivide, splitAdd, splitSubtract, 
-                          splitPower, splitLogarithm, subFromLeft, subFromRight, divFromLeft, divFromRight] ++ 
+equationTransformations = [splitMultiplyLeft, splitDivideLeft, splitAddLeft, splitSubtractLeft,
+                          splitMultiplyRight, splitDivideRight, splitAddRight, splitSubtractRight,
+                          splitPowerRight, splitLogarithmRight, splitPowerLeft, splitLogarithmLeft,
+                          subFromLeft, subFromRight, divFromLeft, divFromRight] ++ 
                           lhsExpressionTransformations ++ rhsExpressionTransformations
 
   -- (lifted expression transformations)
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) expressionTransformations
 rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (exmap fn rhs)) expressionTransformations
 
-splitMultiply = invert Multiply Divide
-splitDivide = invert Divide Multiply
-splitAdd = invert Add Subtract
-splitSubtract = invert Subtract Add
+splitMultiplyLeft = invertLeft Multiply Divide
+splitMultiplyRight = invertRight Multiply Divide
+splitDivideLeft = invertLeft Divide Multiply
+splitDivideRight = invertRight Divide Multiply
+splitAddLeft = invertLeft Add Subtract
+splitAddRight = invertRight Add Subtract
+splitSubtractLeft = invertLeft Subtract Add
+splitSubtractRight = invertRight Subtract Add
 
-splitPower :: Equation -> Equation
-splitPower (Equation (Binary Power x expo) rhs) = Equation expo (Binary Logarithm x rhs)
-splitPower (Equation lhs (Binary Power x expo)) = Equation (Binary Logarithm x lhs) expo
-splitPower equation = equation
+splitPowerLeft :: Equation -> Equation
+splitPowerLeft (Equation (Binary Power x expo) rhs) = Equation expo (Binary Logarithm x rhs)
+splitPowerLeft equation = equation
 
-splitLogarithm :: Equation -> Equation
-splitLogarithm (Equation (Binary Logarithm b x) rhs) = Equation x (Binary Power b rhs)
-splitLogarithm (Equation lhs (Binary Logarithm b x)) = Equation (Binary Power b lhs) x
-splitLogarithm equation = equation
+splitPowerRight :: Equation -> Equation
+splitPowerRight (Equation lhs (Binary Power x expo)) = Equation (Binary Logarithm x lhs) expo
+splitPowerRight equation = equation
 
--- splitPower = invert Power Logarithm
--- splitLogarithm = invert Logarithm Power
+splitLogarithmLeft :: Equation -> Equation
+splitLogarithmLeft (Equation (Binary Logarithm b x) rhs) = Equation x (Binary Power b rhs)
+splitLogarithmLeft equation = equation
+
+splitLogarithmRight :: Equation -> Equation
+splitLogarithmRight (Equation lhs (Binary Logarithm b x)) = Equation (Binary Power b lhs) x
+splitLogarithmRight equation = equation
 
 subFromLeft = toRight Subtract (Nullary (Integ 0))
 subFromRight = toLeft Subtract (Nullary (Integ 0))
 divFromLeft = toRight Divide (Nullary (Integ 1))
 divFromRight = toLeft Multiply (Nullary (Integ 1))
 
-invert :: BinaryOp -> BinaryOp -> Equation -> Equation
-invert op inverse (Equation (Binary op2 x y) rhs)
-       | op == op2 = Equation x (Binary inverse rhs y)
-       | otherwise = Equation (Binary op2 x y) rhs
-invert op inverse (Equation lhs (Binary op2 x y))
-       | op == op2 = Equation (Binary inverse lhs y) x
-       | otherwise = Equation lhs (Binary op2 x y)
-invert _ _ eqn = eqn
+invertRight :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertRight op inverse (Equation lhs (Binary op2 x y))
+            | op == op2 = Equation (Binary inverse lhs y) x
+            | otherwise = Equation lhs (Binary op2 x y)
+invertRight _ _ eqn = eqn
+
+invertLeft :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertLeft op inverse (Equation (Binary op2 x y) rhs)
+           | op == op2 = Equation x (Binary inverse rhs y)
+           | otherwise = Equation (Binary op2 x y) rhs
+invertLeft _ _ eqn = eqn
 
 toRight :: BinaryOp -> Expression -> Equation -> Equation
 toRight op unit (Equation lhs rhs) = (Equation unit (Binary op rhs lhs))
