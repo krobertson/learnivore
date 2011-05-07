@@ -64,8 +64,9 @@ equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
 
 -- Equation Transformations
 
-equationTransformations = [splitMultiplyLeft, splitDivideLeft, splitAddLeft, splitSubtractLeft,
-                          splitMultiplyRight, splitDivideRight, splitAddRight, splitSubtractRight,
+equationTransformations = [splitMultiplyLeft, splitMultiplyLeft', splitMultiplyRight, splitMultiplyRight',
+                          splitDivideLeft, splitAddLeft, splitAddLeft', splitSubtractLeft,
+                          splitDivideRight, splitAddRight, splitAddRight', splitSubtractRight,
                           splitPowerRight, splitLogarithmRight, splitPowerLeft, splitLogarithmLeft,
                           subFromLeft, subFromRight, divFromLeft, divFromRight] ++ 
                           lhsExpressionTransformations ++ rhsExpressionTransformations
@@ -76,10 +77,14 @@ rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (
 
 splitMultiplyLeft = invertLeft Multiply Divide
 splitMultiplyRight = invertRight Multiply Divide
+splitMultiplyLeft' = invertLeft' Multiply Divide
+splitMultiplyRight' = invertRight' Multiply Divide
 splitDivideLeft = invertLeft Divide Multiply
 splitDivideRight = invertRight Divide Multiply
 splitAddLeft = invertLeft Add Subtract
 splitAddRight = invertRight Add Subtract
+splitAddLeft' = invertLeft' Add Subtract
+splitAddRight' = invertRight' Add Subtract
 splitSubtractLeft = invertLeft Subtract Add
 splitSubtractRight = invertRight Subtract Add
 
@@ -110,11 +115,23 @@ invertRight op inverse (Equation lhs (Binary op2 x y))
             | otherwise = Equation lhs (Binary op2 x y)
 invertRight _ _ eqn = eqn
 
+invertRight' :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertRight' op inverse (Equation lhs (Binary op2 x y))
+             | op == op2 = Equation (Binary inverse lhs x) y
+             | otherwise = Equation lhs (Binary op2 x y)
+invertRight' _ _ eqn = eqn
+
 invertLeft :: BinaryOp -> BinaryOp -> Equation -> Equation
 invertLeft op inverse (Equation (Binary op2 x y) rhs)
            | op == op2 = Equation x (Binary inverse rhs y)
            | otherwise = Equation (Binary op2 x y) rhs
 invertLeft _ _ eqn = eqn
+
+invertLeft' :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertLeft' op inverse (Equation (Binary op2 x y) rhs)
+            | op == op2 = Equation y (Binary inverse rhs x)
+            | otherwise = Equation (Binary op2 x y) rhs
+invertLeft' _ _ eqn = eqn
 
 toRight :: BinaryOp -> Expression -> Equation -> Equation
 toRight op unit (Equation lhs rhs) = (Equation unit (Binary op rhs lhs))
