@@ -104,6 +104,10 @@ isVariable :: Term -> Bool
 isVariable (Variable _) = True
 isVariable _ = False
 
+isTerm :: Expression -> Bool
+isTerm (Nullary _) = True
+isTerm _ = False
+
 isVariableProduct :: Expression -> Bool
 isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
                   | isVariable x && isNum y = True
@@ -112,7 +116,8 @@ isVariableProduct _ = False
 
 -- expressionTransformations
 expressionTransformations = [absolutify, multiplyByZero, multiplyByOne, distribute, 
-                            collapseAdd, collapseSub, pop, logify, exponentiate, negatify]
+                            applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow, 
+                            pop, negatify]
 
 pop :: Expression -> Expression
 pop (Unary Parens x) = x
@@ -141,21 +146,6 @@ absolutify (Unary Absolute (Unary Negate x)) = x
 absolutify (Unary Absolute x) = x
 absolutify expression = expression
 
-logify :: Expression -> Expression
-logify (Binary Logarithm base (Binary Multiply x y)) = Binary Add (Binary Logarithm base x) (Binary Logarithm base y)
-logify (Binary Logarithm (Nullary (Constant x)) (Nullary (Constant y))) = Nullary (Constant (logBase x y))
-logify (Binary Logarithm (Nullary (Integ x)) (Nullary (Integ y))) = Nullary (Constant (logBase (fromInteger x) (fromInteger y)))
-logify (Binary Logarithm (Nullary (Integ x)) (Nullary (Constant y))) = Nullary (Constant (logBase (fromInteger x) y))
-logify (Binary Logarithm (Nullary (Constant x)) (Nullary (Integ y))) = Nullary (Constant (logBase x (fromInteger y)))
-logify expression = expression
-
-exponentiate :: Expression -> Expression
-exponentiate (Binary Power (Nullary (Constant x)) ((Nullary (Constant y)))) = Nullary (Constant (x ** y))
-exponentiate (Binary Power (Nullary (Integ x)) (Nullary (Integ y))) = Nullary (Constant ((fromInteger x) ** (fromInteger y)))
-exponentiate (Binary Power (Nullary (Constant x)) (Nullary (Integ y))) = Nullary (Constant (x ** (fromInteger y)))
-exponentiate (Binary Power (Nullary (Integ x)) (Nullary (Constant y))) = Nullary (Constant ((fromInteger x) ** y))
-exponentiate expression = expression
-
 negatify :: Expression -> Expression
 negatify (Unary Negate (Nullary (Constant x))) = (Nullary (Constant (negate x)))
 negatify (Unary Negate (Nullary (Integ x))) = (Nullary (Integ (negate x)))
@@ -165,118 +155,56 @@ distribute :: Expression -> Expression
 distribute (Binary Multiply (Binary Add x y) z) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
 distribute x = x
 
-collapseAdd :: Expression -> Expression
-collapseAdd (Binary Add (Nullary x) (Nullary y)) = addTerms x y
-collapseAdd (Binary Add (Nullary (Variable x)) (Binary Multiply y z))
-            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                            ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
-                                                            (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
-                                                            _ -> Binary Add (Nullary (Variable x)) (Binary Multiply y z)
-            | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
-collapseAdd (Binary Add (Binary Multiply y z) (Nullary (Variable x)))
-            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                            ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
-                                                            (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
-                                                            _ -> Binary Add (Binary Multiply y z) (Nullary (Variable x))
-            | otherwise = Binary Add (Binary Multiply y z) (Nullary (Variable x))
-collapseAdd expression = expression
+-- functions for applying operators over terms
+applyMult = applyBinOp Multiply multTerms
+applySub  = applyBinOp Subtract subTerms
+applyAdd  = applyBinOp Add addTerms
+applyDiv  = applyBinOp Divide divTerms
+applyLog  = applyBinOp Logarithm logTerms
+applyPow  = applyBinOp Power powTerms
 
-collapseSub :: Expression -> Expression
-collapseSub (Binary Subtract (Nullary x) (Nullary y)) = subTerms x y
-collapseSub (Binary Subtract (Nullary (Variable x)) (Binary Multiply y z))
-            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                          ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Subtract z (Nullary (Integ 1)))
-                                                          (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Subtract y (Nullary (Integ 1)))
-                                                          _ -> Binary Subtract (Nullary (Variable x)) (Binary Multiply y z)
-            | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
-collapseSub (Binary Subtract (Binary Multiply y z) (Nullary (Variable x)))
-            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                            ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Subtract z (Nullary (Integ 1)))
-                                                            (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Subtract y (Nullary (Integ 1)))
-                                                            _ -> Binary Subtract (Binary Multiply y z) (Nullary (Variable x))
-            | otherwise = Binary Subtract (Binary Multiply y z) (Nullary (Variable x))
-collapseSub expression = expression
+-- apply helpers
+addTerms = forTerms addNums addVars
+subTerms = forTerms subNums subVars
+multTerms = forTerms multNums multVars
+divTerms = forTerms divNums divVars
+powTerms = forTerms powNums powVars
+logTerms = forTerms logNums logVars
 
-collapseMult :: Expression -> Expression
-collapseMult (Binary Multiply (Nullary x) (Nullary y)) = multTerms x y
-collapseMult (Binary Multiply (Nullary (Variable x)) (Binary Multiply y z))
-             | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                             ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
-                                                             (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
-                                                             _ -> Binary Multiply (Nullary (Variable x)) (Binary Multiply y z)
-             | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
-collapseMult (Binary Multiply (Binary Multiply y z) (Nullary (Variable x)))
-             | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                             ((Nullary (Variable var)):tl) -> Binary Multiply y (Binary Add z (Nullary (Integ 1)))
-                                                             (hd:(Nullary (Variable var)):[]) -> Binary Multiply z (Binary Add y (Nullary (Integ 1)))
-                                                             _ -> Binary Add (Binary Multiply y z) (Nullary (Variable x))
-             | otherwise = Binary Add (Binary Multiply y z) (Nullary (Variable x))
-collapseMult expression = expression
+addVars = forVars Add (\x -> Binary Multiply (Nullary (Integ 2)) (Nullary x))
+subVars = forVars Subtract (\x -> Nullary (Integ 0))
+multVars = forVars Multiply (\x -> Binary Multiply (Nullary (Integ 2)) (Nullary x))
+divVars = forVars Divide (\x -> Nullary (Integ 1))
+powVars = forVars Power (\x -> Binary Power (Nullary x) (Nullary x))
+logVars = forVars Logarithm (\x -> Binary Logarithm (Nullary x) (Nullary x))
 
-collapseDiv :: Expression -> Expression
-collapseDiv (Binary Divide (Nullary x) (Nullary y)) = divTerms x y
-collapseDiv (Binary Divide (Nullary (Variable x)) (Binary Divide y z))
-            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                          ((Nullary (Variable var)):tl) -> z
-                                                          (hd:(Nullary (Variable var)):[]) -> Binary Divide (Nullary (Integ 1)) y
-                                                          _ -> Binary Divide (Nullary (Variable x)) (Binary Multiply y z)
-            | otherwise = Binary Add (Nullary (Variable x)) (Binary Multiply y z)
-collapseDiv (Binary Divide (Binary Multiply y z) (Nullary (Variable x)))
-            | ([x] == (nub $ listOfVariables y ++ listOfVariables z)) = case [y,z] of
-                                                            ((Nullary (Variable var)):tl) -> z
-                                                            (hd:(Nullary (Variable var)):[]) -> y
-                                                            _ -> Binary Divide (Binary Multiply y z) (Nullary (Variable x))
-            | otherwise = Binary Divide (Binary Multiply y z) (Nullary (Variable x))
-collapseDiv expression = expression
+addNums = forNums Add (+)
+subNums = forNums Subtract (-)
+multNums = forNums Multiply (*)
+divNums = forNums Divide (/)
+powNums = forNums Power (**)
+logNums = forNums Logarithm (logBase)
 
--- collapse helpers
-addTerms :: Term -> Term -> Expression
-addTerms x y 
-         | isNum x && isNum y = addNums x y
-         | isVariable x && isVariable y && x == y = Binary Multiply (Nullary (Integ 2)) (Nullary x)
-         | otherwise = Binary Add (Nullary x) (Nullary y)
+forNums :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
+forNums _ fn (Integ a) (Integ b) = Nullary (Integ (round (fn (fromInteger a) (fromInteger b))))
+forNums _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
+forNums _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
+forNums op _ x y = Binary op (Nullary x) (Nullary y)
 
-addNums :: Term -> Term -> Expression
-addNums (Integ a) (Integ b) = Nullary (Integ (a + b))
-addNums (Constant x) (Integ y) = Nullary (Constant (x + (fromInteger y)))
-addNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) + y))
-addNums x y = Binary Add (Nullary x) (Nullary y)
+forVars :: BinaryOp -> (Term -> Expression) -> Term -> Term -> Expression
+forVars op fn (Variable x) (Variable y) 
+        | x == y = fn (Variable x)
+        | otherwise = Binary op (Nullary (Variable x)) (Nullary (Variable y)) 
+forVars op _ x y = Binary op (Nullary x) (Nullary y)
 
-subTerms :: Term -> Term -> Expression
-subTerms x y 
-         | isNum x && isNum y = subNums x y
-         | isVariable x && isVariable y && x == y = Nullary (Integ 0)
-         | otherwise = Binary Subtract (Nullary x) (Nullary y)
+forTerms numFn varFn x y
+         | isNum x && isNum y = numFn x y
+         | otherwise = varFn x y
 
-subNums :: Term -> Term -> Expression
-subNums (Integ x) (Integ y) = Nullary (Integ (x - y))
-subNums (Constant x) (Integ y) = Nullary (Constant (x - (fromInteger y)))
-subNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) - y))
-subNums x y = Binary Subtract (Nullary x) (Nullary y)
-
-multTerms :: Term -> Term -> Expression
-multTerms x y
-          | isNum x && isNum y = multNums x y
-          | isVariable x && isVariable y && x == y = Binary Multiply (Nullary (Integ 2)) (Nullary x)
-          | otherwise = Binary Multiply (Nullary x) (Nullary y)
-          
-multNums :: Term -> Term -> Expression
-multNums (Integ x) (Integ y) = Nullary (Integ (x * y))
-multNums (Constant x) (Integ y) = Nullary (Constant (x * (fromInteger y)))
-multNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) * y))
-multNums x y = Binary Multiply (Nullary x) (Nullary y)
-
-divTerms :: Term -> Term -> Expression
-divTerms x y
-         | isNum x && isNum y = divNums x y
-         | isVariable x && isVariable y && x == y = Nullary (Integ 1)
-         | otherwise = Binary Divide (Nullary x) (Nullary y)
-         
-divNums :: Term -> Term -> Expression
-divNums (Integ x) (Integ y) = Nullary (Constant ((fromInteger x) / (fromInteger y)))
-divNums (Constant x) (Integ y) = Nullary (Constant (x / (fromInteger y)))
-divNums (Integ x) (Constant y) = Nullary (Constant ((fromInteger x) / y))
-divNums x y = Binary Divide (Nullary x) (Nullary y)
+applyBinOp op fn (Binary op2 (Nullary x) (Nullary y)) 
+      | op == op2 = fn x y
+      | otherwise = Binary op2 (Nullary x) (Nullary y) 
+applyBinOp _ _ x = x
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 
