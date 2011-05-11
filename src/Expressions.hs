@@ -79,77 +79,6 @@ constSolved (Nullary (Constant _)) = True
 constSolved (Nullary (Integ _)) = True
 constSolved _ = False
 
--- helpers
-eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
-eitherOr fn x y = fn x || fn y
-
-isNum :: Term -> Bool
-isNum (Integ _) = True
-isNum (Constant _) = True
-isNum x = False
-
-isZero :: Term -> Bool
-isZero (Integ 0) = True
-isZero (Constant 0.0) = True
-isZero _ = False
-
-isOne :: Term -> Bool
-isOne (Integ 1) = True
-isOne (Constant 1.0) = True
-isOne _ = False
-
-isVariable :: Term -> Bool
-isVariable (Variable _) = True
-isVariable _ = False
-
-isTerm :: Expression -> Bool
-isTerm (Nullary _) = True
-isTerm _ = False
-
-exprIs :: (Term -> Bool) -> Expression -> Bool
-exprIs fn (Nullary x) = fn x
-exprIs _ _ = False
-
-isZeroExpr :: Expression -> Bool
-isZeroExpr = exprIs isZero
-
-isOneExpr :: Expression -> Bool
-isOneExpr = exprIs isOne
-
-isVarExpr :: Expression -> Bool
-isVarExpr = exprIs isVariable
-
-isVariableProduct :: Expression -> Bool
-isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
-                  | isVariable x && isNum y = True
-                  | isVariable y && isNum x = True
-isVariableProduct _ = False
-
-getConstant :: Expression -> Expression
-getConstant (Binary Multiply (Nullary x) (Nullary y))
- | isVariable x && isNum y = (Nullary y)
- | isVariable y && isNum x = (Nullary x)
- | otherwise = (Nullary (Integ 0))
-getConstant (Nullary (Variable x)) = (Nullary (Integ 1))
-getConstant _ = (Nullary (Integ 0))
-
-singleVariable :: Expression -> Bool
-singleVariable (Nullary (Variable _)) = True
-singleVariable _ = False
-
-numberOfVariables :: Expression -> Int
-numberOfVariables expression = length . listOfVariables $ expression
-
-listOfVariables :: Expression -> [String]
-listOfVariables (Nullary (Variable str)) = [str]
-listOfVariables (Unary op x) = listOfVariables x
-listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
-listOfVariables _ = []
-
-variable :: Expression -> String
-variable (Nullary (Variable str)) = str
-variable _ = ""
-
 -- expressionTransformations
 expressionTransformations = [applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow,
                              absolutify, addZero, multiplyByZero, multiplyByOne, distribute, 
@@ -255,6 +184,79 @@ multNums = forNums Multiply (*)
 divNums = forNums Divide (/)
 powNums = forNums Power (**)
 logNums = forNums Logarithm (logBase)
+
+
+-- helpers
+eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
+eitherOr fn x y = fn x || fn y
+
+isNum :: Term -> Bool
+isNum (Integ _) = True
+isNum (Constant _) = True
+isNum x = False
+
+isZero :: Term -> Bool
+isZero (Integ 0) = True
+isZero (Constant 0.0) = True
+isZero _ = False
+
+isOne :: Term -> Bool
+isOne (Integ 1) = True
+isOne (Constant 1.0) = True
+isOne _ = False
+
+isVariable :: Term -> Bool
+isVariable (Variable _) = True
+isVariable _ = False
+
+isTerm :: Expression -> Bool
+isTerm (Nullary _) = True
+isTerm _ = False
+
+exprIs :: (Term -> Bool) -> Expression -> Bool
+exprIs fn (Nullary x) = fn x
+exprIs _ _ = False
+
+isZeroExpr :: Expression -> Bool
+isZeroExpr = exprIs isZero
+
+isOneExpr :: Expression -> Bool
+isOneExpr = exprIs isOne
+
+isVarExpr :: Expression -> Bool
+isVarExpr = exprIs isVariable
+
+isVariableProduct :: Expression -> Bool
+isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
+                  | isVariable x && isNum y = True
+                  | isVariable y && isNum x = True
+isVariableProduct _ = False
+
+getConstant :: Expression -> Expression
+getConstant (Binary Multiply (Nullary x) (Nullary y))
+ | isVariable x && isNum y = (Nullary y)
+ | isVariable y && isNum x = (Nullary x)
+ | otherwise = (Nullary (Integ 0))
+getConstant (Nullary (Variable x)) = (Nullary (Integ 1))
+getConstant _ = (Nullary (Integ 0))
+
+singleVariable :: Expression -> Bool
+singleVariable (Nullary (Variable _)) = True
+singleVariable _ = False
+
+numberOfVariables :: Expression -> Int
+numberOfVariables expression = length . listOfVariables $ expression
+
+listOfVariables :: Expression -> [String]
+listOfVariables (Nullary (Variable str)) = [str]
+listOfVariables (Unary op x) = listOfVariables x
+listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
+listOfVariables _ = []
+
+variable :: Expression -> String
+variable (Nullary (Variable str)) = str
+variable _ = ""
+
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 
