@@ -2,6 +2,7 @@ module Equations
 (
 solveEq,
 solveEquation,
+eqnSolution,
 printSolvedEquation,
 printEquation,
 Equations.valid,
