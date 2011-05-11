@@ -7,23 +7,11 @@ import Expressions
 -- import Generators
 import Test.HUnit
 
-main = runTestTT $ expressionTests
-
 -- uncomment the below code after figuring out how to get QuickCheck to work
 -- generateExpression = do let sizes = [basic, simple, moderate, complex, hard]
 --                         size <- choose (0, (length sizes) - 1)
 --                         i <- choose (0, (length arithmetic) - 1)
 --                         return ((map (\x -> (sizes !! size) arithmetic randomInteger) arithmetic) !! i)
-
-
--- uncomment the below code after implementing the tests in the list
--- main = runTestTT $ expressionTests
--- 
-expressionTests = TestLabel "Expression Simplification Tests" (TestList [arithmeticTests, preAlgebraTests])
--- 
-arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tLog, tPow, tAbs, tNeg])
-
-preAlgebraTests = TestLabel "Algebra Tests" (TestList [])
 
 -- type ApproximateDouble = AbsolutelyApproximateValue (Digits Three)
 -- 
@@ -31,6 +19,17 @@ preAlgebraTests = TestLabel "Algebra Tests" (TestList [])
 -- wrapAD = AbsolutelyApproximateValue
 -- unwrapAD :: ApproximateDouble Double -> Double
 -- unwrapAD = unwrapAbsolutelyApproximateValue
+
+main = runTestTT $ expressionTests
+-- 
+expressionTests = TestLabel "Expression Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests])
+-- 
+arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
+
+preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow])
+
+algebraTests = TestLabel "Algebra Tests" (TestList [tVar1, tVar2, tVar3])
+
 
 tAdd = TestCase $ assertEqual
           "should add two integers"
@@ -59,7 +58,7 @@ tPow = TestCase $ assertEqual
           
 tLog = TestCase $ assertEqual
           "should log two integers"
-          "2" $
+          "2.0" $
           exprSolution  "log<2>(4)"
           
 tAbs = TestCase $ assertEqual
@@ -71,3 +70,19 @@ tNeg = TestCase $ assertEqual
           "should multiply two integers"
           "-5" $
           exprSolution  "-(3 + 2)"
+          
+tVar1 = TestCase $ assertEqual
+          "should collapse two instances of the same variable"
+          "2 * x" $
+          exprSolution  "x + x"
+          
+tVar2 = TestCase $ assertEqual
+          "should collapse three instances of the same variable"
+          "3 * x" $
+          exprSolution  "x + x + x"
+          
+tVar3 = TestCase $ assertEqual
+          "should collapse three instances of the same variable"
+          "4 * x" $
+          exprSolution  "2 * x + 2 * x"
+          

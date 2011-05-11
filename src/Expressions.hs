@@ -70,7 +70,7 @@ varSolved (Nullary (Variable x)) = True
 varSolved (Unary _ (Nullary (Variable _))) = True
 varSolved (Binary _ x y)
           | isVarExpr x && isVarExpr y && x /= y = False
-          | isTerm x && isTerm y= True
+          | (isVarExpr x && constSolved y) || (constSolved x && isVarExpr y) = True
           | otherwise = False
 varSolved _ = False
 
@@ -122,8 +122,16 @@ isVarExpr = exprIs isVariable
 isVariableProduct :: Expression -> Bool
 isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
                   | isVariable x && isNum y = True
-                  | isVariable y && isNum y = True
+                  | isVariable y && isNum x = True
 isVariableProduct _ = False
+
+getConstant :: Expression -> Expression
+getConstant (Binary Multiply (Nullary x) (Nullary y))
+ | isVariable x && isNum y = (Nullary y)
+ | isVariable y && isNum x = (Nullary x)
+ | otherwise = (Nullary (Integ 0))
+getConstant (Nullary (Variable x)) = (Nullary (Integ 1))
+getConstant _ = (Nullary (Integ 0))
 
 singleVariable :: Expression -> Bool
 singleVariable (Nullary (Variable _)) = True
@@ -138,10 +146,14 @@ listOfVariables (Unary op x) = listOfVariables x
 listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
 listOfVariables _ = []
 
+variable :: Expression -> String
+variable (Nullary (Variable str)) = str
+variable _ = ""
+
 -- expressionTransformations
-expressionTransformations = [absolutify, addZero, multiplyByZero, multiplyByOne, distribute, 
-                            applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow, 
-                            pop, negatify]
+expressionTransformations = [applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow,
+                             absolutify, addZero, multiplyByZero, multiplyByOne, distribute, 
+                             pop, negatify, collapseVars]
 
 pop :: Expression -> Expression
 pop (Unary Parens x) = x
@@ -181,6 +193,16 @@ distribute :: Expression -> Expression
 distribute (Binary Multiply (Binary Add x y) z) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
 distribute x = x
 
+collapseVars :: Expression -> Expression
+collapseVars (Binary Add x y)
+             | variable x == variable y && variable x /= "" = Binary Multiply (Nullary (Integ 2)) x
+             | (isVariableProduct x || variable x /= "") && 
+               (isVariableProduct y || variable y /= "") && 
+               (listOfVariables x List.\\ listOfVariables y == []) = Binary Multiply
+                                                               (applyAdd (Binary Add (getConstant x) (getConstant y)))
+                                                               (Nullary (Variable (head $ listOfVariables x)))
+collapseVars x = x
+
 -- functions for applying operators over terms
 applyMult = applyBinOp Multiply multTerms
 applySub  = applyBinOp Subtract subTerms
@@ -191,7 +213,9 @@ applyPow  = applyBinOp Power powTerms
 
 -- apply helpers
 forNums :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
-forNums _ fn (Integ a) (Integ b) = Nullary (Constant (fn (fromInteger a) (fromInteger b)))
+forNums op fn (Integ a) (Integ b)
+        | op /= Logarithm = Nullary (Integ (round (fn (fromInteger a) (fromInteger b))))
+        | otherwise = Nullary (Constant (fn (fromInteger a) (fromInteger b)))
 forNums _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
 forNums _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
 forNums op _ x y = Binary op (Nullary x) (Nullary y)

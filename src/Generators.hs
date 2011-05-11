@@ -5,7 +5,7 @@ import System.Random
 import System.IO.Unsafe
 import MathStructures
 import Expressions
-import Equations   
+import Equations
 
 randomInt n = unsafePerformIO $ getStdRandom (randomR (1,n))  
 randomInteger n = Integ (fromInteger $ randomInt n)
