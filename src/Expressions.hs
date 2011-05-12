@@ -84,6 +84,12 @@ expressionTransformations = [applyAdd, applySub, applyMult, applyDiv, applyLog, 
                              absolutify, addZero, multiplyByZero, multiplyByOne, distribute, 
                              pop, negatify, collapseVars]
 
+-- root :: Expression -> Expression
+-- root (Binary NthRoot n expr)
+--      | isNumExpr n && isNumExpr expr = Unary (Constant ((value n) `nthRoot` (value expr)))
+--      | otherwise = Binary NthRoot n expr
+-- root x = x
+
 pop :: Expression -> Expression
 pop (Unary Parens x) = x
 pop x = x
@@ -142,12 +148,16 @@ applyPow  = applyBinOp Power powTerms
 
 -- apply helpers
 forNums :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
-forNums op fn (Integ a) (Integ b)
-        | op /= Logarithm = Nullary (Integ (round (fn (fromInteger a) (fromInteger b))))
-        | otherwise = Nullary (Constant (fn (fromInteger a) (fromInteger b)))
+forNums op fn (Integ a) (Integ b) = Nullary (Integ (round (fn (fromInteger a) (fromInteger b))))
 forNums _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
 forNums _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
 forNums op _ x y = Binary op (Nullary x) (Nullary y)
+
+forNumsDouble :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
+forNumsDouble op fn (Integ a) (Integ b) = Nullary (Constant (fn (fromInteger a) (fromInteger b)))
+forNumsDouble _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
+forNumsDouble _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
+forNumsDouble op _ x y = Binary op (Nullary x) (Nullary y)
 
 forVars :: BinaryOp -> (Term -> Expression) -> Term -> Term -> Expression
 forVars op fn (Variable x) (Variable y) 
@@ -181,12 +191,14 @@ logVars = forVars Logarithm (\x -> Binary Logarithm (Nullary x) (Nullary x))
 addNums = forNums Add (+)
 subNums = forNums Subtract (-)
 multNums = forNums Multiply (*)
-divNums = forNums Divide (/)
+divNums = forNumsDouble Divide (/)
 powNums = forNums Power (**)
-logNums = forNums Logarithm (logBase)
+logNums = forNumsDouble Logarithm (logBase)
 
 
 -- helpers
+n `nthRoot` x = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)
+
 eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
 eitherOr fn x y = fn x || fn y
 
@@ -216,6 +228,8 @@ isTerm _ = False
 exprIs :: (Term -> Bool) -> Expression -> Bool
 exprIs fn (Nullary x) = fn x
 exprIs _ _ = False
+
+isNumExpr = exprIs isNum
 
 isZeroExpr :: Expression -> Bool
 isZeroExpr = exprIs isZero
@@ -256,6 +270,11 @@ listOfVariables _ = []
 variable :: Expression -> String
 variable (Nullary (Variable str)) = str
 variable _ = ""
+
+value :: Expression -> Double
+value (Nullary (Constant n)) = n
+value (Nullary (Integ n)) = fromInteger n
+value _ = 0.0 / 0.0
 
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation

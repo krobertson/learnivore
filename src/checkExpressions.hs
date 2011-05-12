@@ -47,8 +47,8 @@ tMult = TestCase $ assertEqual
           exprSolution  "2 * 3"
           
 tDiv = TestCase $ assertEqual
-          "should multiply two integers"
-          "2" $
+          "should divide two integers"
+          "2.0" $
           exprSolution  "4 / 2"
           
 tPow = TestCase $ assertEqual
@@ -62,12 +62,12 @@ tLog = TestCase $ assertEqual
           exprSolution  "log<2>(4)"
           
 tAbs = TestCase $ assertEqual
-          "should multiply two integers"
+          "should take the absolute value of a negative integer"
           "6" $
           exprSolution  "|-6|"
           
 tNeg = TestCase $ assertEqual
-          "should multiply two integers"
+          "should negate an expression"
           "-5" $
           exprSolution  "-(3 + 2)"
           

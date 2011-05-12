@@ -63,14 +63,21 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
 equationSize :: Equation -> Integer
 equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
 
+liftExprTLeft :: (Expression -> Expression) -> Equation -> Equation
+liftExprTLeft fn (Equation lhs rhs) = Equation (exmap fn lhs) rhs
+
+liftExprTRight :: (Expression -> Expression) -> Equation -> Equation
+liftExprTRight fn (Equation lhs rhs) = Equation lhs (exmap fn rhs)
+
 -- Equation Transformations
 
-equationTransformations = [splitMultiplyLeft, splitMultiplyLeft', splitMultiplyRight, splitMultiplyRight',
+equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransformations ++
+                         [rotate, multByOneLeft, multByOneRight, addZeroLeft, addZeroRight, splitMultiplyLeft, splitMultiplyLeft', splitMultiplyRight, splitMultiplyRight',
                           splitDivideLeft, splitAddLeft, splitAddLeft', splitSubtractLeft,
                           splitDivideRight, splitAddRight, splitAddRight', splitSubtractRight,
                           splitPowerRight, splitLogarithmRight, splitPowerLeft, splitLogarithmLeft,
-                          subFromLeft, subFromRight, divFromLeft, divFromRight] ++ 
-                          lhsExpressionTransformations ++ rhsExpressionTransformations
+                          subFromLeft, subFromRight, divFromLeft, divFromRight]
+                          
 
   -- (lifted expression transformations)
 lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) expressionTransformations
@@ -105,10 +112,18 @@ splitLogarithmRight :: Equation -> Equation
 splitLogarithmRight (Equation lhs (Binary Logarithm b x)) = Equation (Binary Power b lhs) x
 splitLogarithmRight equation = equation
 
+rotate :: Equation -> Equation
+rotate (Equation lhs rhs) = Equation rhs lhs
+
 subFromLeft = toRight Subtract (Nullary (Integ 0))
 subFromRight = toLeft Subtract (Nullary (Integ 0))
 divFromLeft = toRight Divide (Nullary (Integ 1))
 divFromRight = toLeft Multiply (Nullary (Integ 1))
+
+multByOneLeft = liftExprTLeft (\x -> (Binary Multiply (Nullary (Integ 1)) x))
+multByOneRight = liftExprTRight (\x -> (Binary Multiply (Nullary (Integ 1)) x))
+addZeroLeft = liftExprTLeft (\x -> (Binary Add (Nullary (Integ 0)) x))
+addZeroRight = liftExprTRight (\x -> (Binary Add (Nullary (Integ 0)) x))
 
 invertRight :: BinaryOp -> BinaryOp -> Equation -> Equation
 invertRight op inverse (Equation lhs (Binary op2 x y))
