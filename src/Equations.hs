@@ -16,6 +16,9 @@ import Data.Graph.AStar
 import MathStructures
 import Expressions
 
+equivalentEquations :: String -> String -> String
+equivalentEquations inp = processEquation (show . equateEq (parseEquation inp))
+
 solveEquation :: String -> String
 solveEquation = processEquation (show . solveEq)
 
@@ -41,6 +44,17 @@ solveEq equation = SolvedEquation (case solutionPath of (Just path) -> Just (equ
                                                      equationSize
                                                      solvedEq
                                                      equation
+                                                     
+equateEq :: Equation -> Equation -> SolvedEquation
+equateEq equation1 equation2 = SolvedEquation (case solutionPath of (Just path) -> Just (equation2:path)
+                                                                    Nothing -> Nothing)
+                     where solutionPath = if equation1 == equation2 
+                                          then Just [equation2] 
+                                          else aStar equationGraph 
+                                                     (\x y -> 1) 
+                                                     (\x -> abs (equationSize x - equationSize equation2))
+                                                     (\x -> x == equation1)
+                                                     equation2
                                                      
 solvedEq :: Equation -> Bool
 solvedEq (Equation lhs rhs)

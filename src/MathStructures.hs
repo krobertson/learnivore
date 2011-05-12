@@ -2,6 +2,8 @@ module MathStructures
 (
 processExpression,
 processEquation,
+parseExpression,
+parseEquation,
 printEquation,
 printExpression,
 exmap,
@@ -134,11 +136,23 @@ processExpression fn inp = case parse exprparser "" inp of
                      { Left err -> "Not a legitimate Arithmetic Expressionession: " ++ show err
                      ; Right ans -> fn $ ans
                      }
+                     
+parseExpression :: String -> Expression
+parseExpression inp = case parse exprparser "" inp of
+                     { Left err -> (Binary Divide (Nullary (Integ 0)) (Nullary (Integ 0)))
+                     ; Right ans -> ans
+                     }
 
 processEquation :: (Equation -> String) -> String -> String
 processEquation fn inp = case parse eqnparser "" inp of
                          { Left err -> show err
                          ; Right ans -> fn $ ans
+                         } 
+                         
+parseEquation :: String -> Equation
+parseEquation inp = case parse eqnparser "" inp of
+                         { Left err -> Equation (Nullary (Integ 0)) (Nullary (Integ 1))
+                         ; Right ans -> ans
                          } 
                          
 -- traversal functions
