@@ -25,15 +25,6 @@ solveEquation = processEquation (show . solveEq)
 eqnSolution :: String -> String
 eqnSolution = processEquation getEqnSolution
 
-getEqnSolution :: Equation -> String
-getEqnSolution x = case (solveEq x) of
-                        SolvedEquation (Just sol) -> show (last sol)
-                        SolvedEquation (Nothing) -> "No Solution"
-
-printSolvedEquation :: String -> IO ()
-printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ ans
-                                                             show xs ++ "\n" ++ solvedString xs)
-
 solveEq :: Equation -> SolvedEquation
 solveEq equation = SolvedEquation (case solutionPath of (Just path) -> Just (equation:path)
                                                         Nothing -> Nothing)
@@ -83,6 +74,14 @@ liftExprTLeft fn (Equation lhs rhs) = Equation (exmap fn lhs) rhs
 liftExprTRight :: (Expression -> Expression) -> Equation -> Equation
 liftExprTRight fn (Equation lhs rhs) = Equation lhs (exmap fn rhs)
 
+getEqnSolution :: Equation -> String
+getEqnSolution x = case (solveEq x) of
+                        SolvedEquation (Just sol) -> show (last sol)
+                        SolvedEquation (Nothing) -> "No Solution"
+
+printSolvedEquation :: String -> IO ()
+printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ ans
+                                                             show xs ++ "\n" ++ solvedString xs)
 -- Equation Transformations
 
 equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransformations ++
