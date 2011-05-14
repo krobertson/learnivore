@@ -64,20 +64,20 @@ equationGraph = fromList . expandEq
 expandEq :: Equation -> [Equation]
 expandEq = twiddleEq equationTransformations
 
-twiddleEq :: [Equation -> Equation] -> Equation -> [Equation]
+twiddleEq :: [Equation -> [Equation]] -> Equation -> [Equation]
 twiddleEq transforms equation = if (not . solvedEq $ equation) 
                                 then List.filter (not . (== equation)) $
-                                     List.map ($ equation) transforms
+                                     List.concat $ List.map ($ equation) transforms
                                 else []
                               
 equationSize :: Equation -> Integer
 equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
 
-liftExprTLeft :: (Expression -> Expression) -> Equation -> Equation
-liftExprTLeft fn (Equation lhs rhs) = Equation (exmap fn lhs) rhs
+liftExprTLeft :: (Expression -> Expression) -> Equation -> [Equation]
+liftExprTLeft fn (Equation lhs rhs) = List.map (\x -> Equation x rhs) (exmap fn lhs)
 
-liftExprTRight :: (Expression -> Expression) -> Equation -> Equation
-liftExprTRight fn (Equation lhs rhs) = Equation lhs (exmap fn rhs)
+liftExprTRight :: (Expression -> Expression) -> Equation -> [Equation]
+liftExprTRight fn (Equation lhs rhs) = List.map (\x -> Equation lhs x) (exmap fn rhs)
 
 getEqnSolution :: Equation -> String
 getEqnSolution x = case (solveEq x) of
@@ -98,8 +98,8 @@ equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransform
                           
 
   -- (lifted expression transformations)
-lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation (exmap fn lhs) rhs) expressionTransformations
-rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> Equation lhs (exmap fn rhs)) expressionTransformations
+lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> List.map (\x -> Equation x rhs) (exmap fn lhs)) expressionTransformations
+rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> List.map (\x -> Equation lhs x) (exmap fn rhs)) expressionTransformations
 
 splitMultiplyLeft = invertLeft Multiply Divide
 splitMultiplyRight = invertRight Multiply Divide
@@ -114,24 +114,24 @@ splitAddRight' = invertRight' Add Subtract
 splitSubtractLeft = invertLeft Subtract Add
 splitSubtractRight = invertRight Subtract Add
 
-splitPowerLeft :: Equation -> Equation
-splitPowerLeft (Equation (Binary Power x expo) rhs) = Equation expo (Binary Logarithm x rhs)
-splitPowerLeft equation = equation
+splitPowerLeft :: Equation -> [Equation]
+splitPowerLeft (Equation (Binary Power x expo) rhs) = [Equation expo (Binary Logarithm x rhs)]
+splitPowerLeft equation = [equation]
 
-splitPowerRight :: Equation -> Equation
-splitPowerRight (Equation lhs (Binary Power x expo)) = Equation (Binary Logarithm x lhs) expo
-splitPowerRight equation = equation
+splitPowerRight :: Equation -> [Equation]
+splitPowerRight (Equation lhs (Binary Power x expo)) = [Equation (Binary Logarithm x lhs) expo]
+splitPowerRight equation = [equation]
 
-splitLogarithmLeft :: Equation -> Equation
-splitLogarithmLeft (Equation (Binary Logarithm b x) rhs) = Equation x (Binary Power b rhs)
-splitLogarithmLeft equation = equation
+splitLogarithmLeft :: Equation -> [Equation]
+splitLogarithmLeft (Equation (Binary Logarithm b x) rhs) = [Equation x (Binary Power b rhs)]
+splitLogarithmLeft equation = [equation]
 
-splitLogarithmRight :: Equation -> Equation
-splitLogarithmRight (Equation lhs (Binary Logarithm b x)) = Equation (Binary Power b lhs) x
-splitLogarithmRight equation = equation
+splitLogarithmRight :: Equation -> [Equation]
+splitLogarithmRight (Equation lhs (Binary Logarithm b x)) = [Equation (Binary Power b lhs) x]
+splitLogarithmRight equation = [equation]
 
-rotate :: Equation -> Equation
-rotate (Equation lhs rhs) = Equation rhs lhs
+rotate :: Equation -> [Equation]
+rotate (Equation lhs rhs) = [Equation rhs lhs]
 
 subFromLeft = toRight Subtract (Nullary (Integ 0))
 subFromRight = toLeft Subtract (Nullary (Integ 0))
@@ -143,35 +143,35 @@ multByOneRight = liftExprTRight (\x -> (Binary Multiply (Nullary (Integ 1)) x))
 addZeroLeft = liftExprTLeft (\x -> (Binary Add (Nullary (Integ 0)) x))
 addZeroRight = liftExprTRight (\x -> (Binary Add (Nullary (Integ 0)) x))
 
-invertRight :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertRight :: BinaryOp -> BinaryOp -> Equation -> [Equation]
 invertRight op inverse (Equation lhs (Binary op2 x y))
-            | op == op2 = Equation (Binary inverse lhs y) x
-            | otherwise = Equation lhs (Binary op2 x y)
-invertRight _ _ eqn = eqn
+            | op == op2 = [Equation (Binary inverse lhs y) x]
+            | otherwise = [Equation lhs (Binary op2 x y)]
+invertRight _ _ eqn = [eqn]
 
-invertRight' :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertRight' :: BinaryOp -> BinaryOp -> Equation -> [Equation]
 invertRight' op inverse (Equation lhs (Binary op2 x y))
-             | op == op2 = Equation (Binary inverse lhs x) y
-             | otherwise = Equation lhs (Binary op2 x y)
-invertRight' _ _ eqn = eqn
+             | op == op2 = [Equation (Binary inverse lhs x) y]
+             | otherwise = [Equation lhs (Binary op2 x y)]
+invertRight' _ _ eqn = [eqn]
 
-invertLeft :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertLeft :: BinaryOp -> BinaryOp -> Equation -> [Equation]
 invertLeft op inverse (Equation (Binary op2 x y) rhs)
-           | op == op2 = Equation x (Binary inverse rhs y)
-           | otherwise = Equation (Binary op2 x y) rhs
-invertLeft _ _ eqn = eqn
+           | op == op2 = [Equation x (Binary inverse rhs y)]
+           | otherwise = [Equation (Binary op2 x y) rhs]
+invertLeft _ _ eqn = [eqn]
 
-invertLeft' :: BinaryOp -> BinaryOp -> Equation -> Equation
+invertLeft' :: BinaryOp -> BinaryOp -> Equation -> [Equation]
 invertLeft' op inverse (Equation (Binary op2 x y) rhs)
-            | op == op2 = Equation y (Binary inverse rhs x)
-            | otherwise = Equation (Binary op2 x y) rhs
-invertLeft' _ _ eqn = eqn
+            | op == op2 = [Equation y (Binary inverse rhs x)]
+            | otherwise = [Equation (Binary op2 x y) rhs]
+invertLeft' _ _ eqn = [eqn]
 
-toRight :: BinaryOp -> Expression -> Equation -> Equation
-toRight op unit (Equation lhs rhs) = (Equation unit (Binary op rhs lhs))
+toRight :: BinaryOp -> Expression -> Equation -> [Equation]
+toRight op unit (Equation lhs rhs) = [(Equation unit (Binary op rhs lhs))]
 
-toLeft :: BinaryOp -> Expression -> Equation -> Equation
-toLeft op unit (Equation lhs rhs) = (Equation (Binary op lhs rhs) unit)
+toLeft :: BinaryOp -> Expression -> Equation -> [Equation]
+toLeft op unit (Equation lhs rhs) = [(Equation (Binary op lhs rhs) unit)]
 
 -- Validity
 valid :: Equation -> Bool

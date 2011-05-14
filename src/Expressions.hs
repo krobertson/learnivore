@@ -49,10 +49,10 @@ expand = twiddle $ List.map exmap expressionTransformations
 expressionGraph :: Expression -> Set Expression                          
 expressionGraph = fromList . expand
 
-twiddle :: [Expression -> Expression] -> Expression -> [Expression]
+twiddle :: [Expression -> [Expression]] -> Expression -> [Expression]
 twiddle transforms expression = if (not . solved $ expression) 
                                 then List.filter (not . (== expression)) $
-                                     List.map ($ expression) transforms
+                                     List.concat $ List.map ($ expression) transforms
                                 else []
 
 expressionSize :: Expression -> Integer

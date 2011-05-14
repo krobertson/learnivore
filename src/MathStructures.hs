@@ -156,10 +156,14 @@ parseEquation inp = case parse eqnparser "" inp of
                          } 
                          
 -- traversal functions
-exmap :: (Expression -> Expression) -> Expression -> Expression
-exmap fn (Nullary term) = fn $ Nullary term
-exmap fn (Unary operator expr) = fn $ Unary operator (exmap fn expr)
-exmap fn (Binary operator leftExpression rightExpression) = fn $ Binary operator (exmap fn leftExpression) (exmap fn rightExpression) 
+exmap :: (Expression -> Expression) -> Expression -> [Expression]
+exmap fn (Nullary term) = [fn $ Nullary term]
+exmap fn (Unary operator expr) = [fn $ Unary operator expr] ++ map (\x -> Unary operator x) (exmap fn expr)
+exmap fn (Binary operator leftExpression rightExpression) = [fn $ Binary operator leftExpression rightExpression]
+                                                            ++ (map (\x -> Binary operator leftExpression x) 
+                                                                 (exmap fn rightExpression))
+                                                            ++ (map (\x -> Binary operator x rightExpression) 
+                                                                 (exmap fn leftExpression))
 
 -- show helpers 
 
