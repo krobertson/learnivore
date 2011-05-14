@@ -22,7 +22,7 @@ import Test.HUnit
 
 main = runTestTT $ equationTests
 -- 
-equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests])
+equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations])
 -- 
 arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
 
@@ -30,7 +30,7 @@ preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow])
 
 algebraTests = TestLabel "Algebra Tests" (TestList [tVar1, tVar2, tVar3])
 
-bothSidesTests = TestLabel "Equation Operator Tests" (TestList [tAddBothSides, tSubBothSides, tMultBothSides, tDivBothSides, tNegBothSides, tLogBothSides, tPowBothSides])
+bothSidesTests = TestLabel "Equation Operator Tests" (TestList [tAddBothSides, tSubBothSides, tMultBothSides, tDivBothSides, tLogBothSides, tPowBothSides])
 
 
 tAdd = TestCase $ assertEqual
@@ -132,3 +132,8 @@ tPowBothSides = TestCase $ assertEqual
 --           "should find x when it is the base of a logarithm: log<x>(4)=2"
 --           "x = 2" $
 --           eqnSolution "log<x>(4)=2"
+
+tEquivalentEquations = TestCase $ assertEqual
+          "should recognize two equivalent equations: 2^x = 4 => 10 * 2^x = 40"
+          "2^x = 4.0" $
+          equivalentEquations "2^x=4" "10 * 2^x=40"

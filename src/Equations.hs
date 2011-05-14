@@ -1,7 +1,9 @@
 module Equations
 (
+searchEq,
 solveEq,
 solveEquation,
+equivalentEquations,
 eqnSolution,
 printSolvedEquation,
 printEquation,
@@ -17,7 +19,7 @@ import MathStructures
 import Expressions
 
 equivalentEquations :: String -> String -> String
-equivalentEquations inp = processEquation (show . equateEq (parseEquation inp))
+equivalentEquations inp = processEquation (show . answer . equateEq (parseEquation inp))
 
 solveEquation :: String -> String
 solveEquation = processEquation (show . solveEq)
@@ -25,27 +27,30 @@ solveEquation = processEquation (show . solveEq)
 eqnSolution :: String -> String
 eqnSolution = processEquation getEqnSolution
 
-solveEq :: Equation -> SolvedEquation
-solveEq equation = SolvedEquation (case solutionPath of (Just path) -> Just (equation:path)
-                                                        Nothing -> Nothing)
-                     where solutionPath = if solvedEq equation 
-                                          then Just [equation] 
-                                          else aStar equationGraph 
-                                                     (\x y -> 1) 
-                                                     equationSize
-                                                     solvedEq
-                                                     equation
-                                                     
+answer :: SolvedEquation -> Equation
+answer (SolvedEquation x) = case x of
+                                  (Just xs) -> last xs
+                                  (Nothing) -> Equation (Nullary (Integ 1)) (Nullary (Integ 0))
+
+onThePath :: Equation -> Equation -> Bool
+onThePath x y = x == answer (equateEq x y)
+
+searchEq :: (Equation -> Bool) -> (Equation -> Integer) -> Equation -> SolvedEquation
+searchEq goalTest heuristicFn equation = SolvedEquation (case solutionPath of (Just path) -> Just (equation:path)
+                                                                              Nothing -> Nothing)
+                                                              where solutionPath = if goalTest equation 
+                                                                                   then Just [equation] 
+                                                                                   else aStar equationGraph 
+                                                                                              (\x y -> 1) 
+                                                                                              heuristicFn
+                                                                                              goalTest
+                                                                                              equation
+                                      
+solveEq :: Equation -> SolvedEquation                                                     
+solveEq = searchEq solvedEq equationSize
 equateEq :: Equation -> Equation -> SolvedEquation
-equateEq equation1 equation2 = SolvedEquation (case solutionPath of (Just path) -> Just (equation2:path)
-                                                                    Nothing -> Nothing)
-                     where solutionPath = if equation1 == equation2 
-                                          then Just [equation2] 
-                                          else aStar equationGraph 
-                                                     (\x y -> 1) 
-                                                     (\x -> abs (equationSize x - equationSize equation2))
-                                                     (\x -> x == equation1)
-                                                     equation2
+equateEq equation = searchEq (\x -> x == equation) (\x -> abs (equationSize x - equationSize equation))
+
                                                      
 solvedEq :: Equation -> Bool
 solvedEq (Equation lhs rhs)
