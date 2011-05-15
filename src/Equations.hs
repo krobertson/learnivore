@@ -114,21 +114,23 @@ splitAddRight' = invertRight' Add Subtract
 splitSubtractLeft = invertLeft Subtract Add
 splitSubtractRight = invertRight Subtract Add
 
-splitPowerLeft :: Equation -> [Equation]
-splitPowerLeft (Equation (Binary Power x expo) rhs) = [Equation expo (Binary Logarithm x rhs)]
-splitPowerLeft equation = [equation]
+splitPowerLeft = invertPowersLeft Power Logarithm
+splitPowerRight = invertPowersRight Power Logarithm
+splitLogarithmLeft = invertPowersLeft Logarithm Power
+splitLogarithmRight = invertPowersRight Logarithm Power
 
-splitPowerRight :: Equation -> [Equation]
-splitPowerRight (Equation lhs (Binary Power x expo)) = [Equation (Binary Logarithm x lhs) expo]
-splitPowerRight equation = [equation]
 
-splitLogarithmLeft :: Equation -> [Equation]
-splitLogarithmLeft (Equation (Binary Logarithm b x) rhs) = [Equation x (Binary Power b rhs)]
-splitLogarithmLeft equation = [equation]
+invertPowersRight :: BinaryOp -> BinaryOp -> Equation -> [Equation]
+invertPowersRight opLeft opRight equation@(Equation (Binary op x y) rhs)
+                  | opLeft == op = [Equation y (Binary opRight x rhs)]
+                  | otherwise = [equation]
+invertPowersRight _ _ equation = [equation]
 
-splitLogarithmRight :: Equation -> [Equation]
-splitLogarithmRight (Equation lhs (Binary Logarithm b x)) = [Equation (Binary Power b lhs) x]
-splitLogarithmRight equation = [equation]
+invertPowersLeft :: BinaryOp -> BinaryOp -> Equation -> [Equation]
+invertPowersLeft opLeft opRight equation@(Equation lhs (Binary op x y))
+                 | opLeft == op = [Equation (Binary opLeft x lhs) y]
+                 | otherwise = [equation]
+invertPowersLeft _ _ equation = [equation]
 
 rotate :: Equation -> [Equation]
 rotate (Equation lhs rhs) = [Equation rhs lhs]
