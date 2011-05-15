@@ -18,6 +18,7 @@ SolvedEquation(..),
 
 import Data.List
 import Control.Monad(liftM)
+import Text.JSON
 import Text.Parsec
 import Text.Parsec.String
 import Text.Parsec.Expr
@@ -92,8 +93,34 @@ instance (Show (Equation)) where
 
 instance Show SolvedEquation where
   show = showSolvedEquation
+  
+instance JSON Expression where
+  showJSON x = JSObject (toJSObject [("expression", JSString (toJSString . show $ x))])
+  readJSON json= makeExpression (fromOk (readJSON json))
+  
+instance JSON Equation where
+  showJSON (Equation lhs rhs) = JSObject (toJSObject [("equation", (JSObject (toJSObject [("lhs", showJSON lhs), ("rhs", showJSON rhs)])))]) 
+  readJSON json = makeEquation (fromOk (readJSON json))
+  
 
--- String and print functions
+-- String, print, and json functions
+makeExpression :: JSObject JSValue -> Result Expression
+makeExpression json = let (!) = flip valFromObj in do
+    expression <- (json ! "expression") :: Result JSString
+    return (parseExpression . fromJSString $ expression)
+    
+makeEquation :: JSObject JSValue -> Result Equation
+makeEquation json = let (!) = flip valFromObj in do
+    equation <- (json ! "equation") :: Result (JSObject JSValue)
+    lhs <- readJSON (JSObject (fromOk (equation ! "lhs"))) :: Result Expression
+    rhs <- readJSON (JSObject (fromOk (equation ! "rhs"))) :: Result Expression
+    return (Equation lhs rhs)
+    
+fromOk :: Result (JSObject JSValue) -> (JSObject JSValue)
+fromOk (Text.JSON.Ok json) = json
+
+fromOkGeneric (Text.JSON.Ok a) = a
+
 showExpression :: BinaryOp -> Expression -> String
 showExpression _ (Nullary term) = show term
 showExpression _ (Unary operator expr) = showUnary operator expr
