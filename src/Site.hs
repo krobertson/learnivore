@@ -44,9 +44,12 @@ index = ifTop $ heistLocal (bindSplices indexSplices) $ render "index"
 -- | Renders the echo page.
 solve :: Application ()
 solve = do eqn <- decodedParam "eqn"
-           heistLocal (bindString "solution" $ T.decodeUtf8 . B.pack . BS.encode $ solveEquation . BS.decode . B.unpack $ eqn) $ render "solve"
+           heistLocal (bindString "solution" $ T.decodeUtf8 $ withByteString renderEqSolution eqn) $ render "solve"
         where
           decodedParam p = fromMaybe "" <$> getParam p
+
+
+withByteString fn str = B.pack . BS.encode $ fn . BS.decode . B.unpack $ str
 
 
 ------------------------------------------------------------------------------

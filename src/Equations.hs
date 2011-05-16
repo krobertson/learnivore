@@ -51,6 +51,8 @@ solveEq = searchEq solvedEq equationSize
 equateEq :: Equation -> Equation -> SolvedEquation
 equateEq equation = searchEq (\x -> x == equation) (\x -> abs (equationSize x - equationSize equation))
 
+join :: String -> [String] -> String
+join str = concat . intersperse str
                                                      
 solvedEq :: Equation -> Bool
 solvedEq (Equation lhs rhs)
