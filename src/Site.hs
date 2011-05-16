@@ -41,12 +41,18 @@ index = ifTop $ heistLocal (bindSplices indexSplices) $ render "index"
 
 
 ------------------------------------------------------------------------------
--- | Renders the echo page.
+-- | Renders the solution.
 solve :: Application ()
 solve = do eqn <- decodedParam "eqn"
            heistLocal (bindString "solution" $ T.decodeUtf8 $ withByteString renderEqSolution eqn) $ render "solve"
         where
           decodedParam p = fromMaybe "" <$> getParam p
+          
+solveJSON :: Application ()
+solveJSON = do eqn <- decodedParam "eqn"
+               heistLocal (bindString "solution" $ T.decodeUtf8 $ withByteString renderEqSolutionJSON eqn) $ render "solveJSON"
+            where
+              decodedParam p = fromMaybe "" <$> getParam p
 
 
 withByteString fn str = B.pack . BS.encode $ fn . BS.decode . B.unpack $ str
@@ -57,5 +63,6 @@ withByteString fn str = B.pack . BS.encode $ fn . BS.decode . B.unpack $ str
 site :: Application ()
 site = route [ ("/",            index)
              , ("/solve",       solve)
+             , ("/solveJSON",   solveJSON)
              ]
        <|> serveDirectory "resources/static"

@@ -94,6 +94,10 @@ instance (Show (Equation)) where
 instance Show SolvedEquation where
   show = showSolvedEquation
   
+instance JSON SolvedEquation where
+  showJSON (SolvedEquation (Just xs)) = JSArray (map showJSON xs)
+  readJSON json = makeSolvedEquation (fromOkVal (readJSON json))
+  
 instance JSON Expression where
   showJSON x = JSObject (toJSObject [("expression", JSString (toJSString . show $ x))])
   readJSON json= makeExpression (fromOk (readJSON json))
@@ -116,8 +120,18 @@ makeEquation json = let (!) = flip valFromObj in do
     rhs <- readJSON (JSObject (fromOk (equation ! "rhs"))) :: Result Expression
     return (Equation lhs rhs)
     
+makeSolvedEquation :: [JSValue] -> Result SolvedEquation
+makeSolvedEquation jsValues = return (SolvedEquation (Just (map (fromOkEq . readJSON) jsValues)::Maybe [Equation]))
+    
 fromOk :: Result (JSObject JSValue) -> (JSObject JSValue)
 fromOk (Text.JSON.Ok json) = json
+
+fromOkEq :: Result Equation -> Equation
+fromOkEq (Text.JSON.Ok a) = a
+fromOkEq _ = (Equation (Nullary (Integ 0)) (Nullary (Integ 1)))
+
+fromOkVal :: Result [JSValue] -> [JSValue]
+fromOkVal (Text.JSON.Ok json) = json
 
 fromOkGeneric (Text.JSON.Ok a) = a
 

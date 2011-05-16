@@ -1,5 +1,5 @@
 module LearnMath
-(renderEqSolution, solveEquation) where
+(renderEqSolution, renderEqSolutionJSON, solveEquation) where
 import Text.JSON
 import MathStructures
 import Expressions
@@ -16,4 +16,4 @@ fromOkEq (Text.JSON.Ok a) = a
 fromOkEq _ = (Equation (Nullary (Integ 0)) (Nullary (Integ 1)))
 
 renderEqSolution = (processEquation (show . solveEq))
-solveEqFromJSON json = show . solveEq . fromOkEq $ (Text.JSON.decode json :: Result Equation)
+renderEqSolutionJSON json = encode . showJSON . solveEq . parseEquation $ json

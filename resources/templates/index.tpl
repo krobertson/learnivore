@@ -18,11 +18,18 @@
     <script type="text/javascript">
     $(document).ready(function(){
       $('#submit').click(function(x) {
-        $.post('/solve', {"eqn": $('#lhs').val()+"="+$('#rhs').val()}, 
+        $.post('/solveJSON', {"eqn": $('#lhs').val()+"="+$('#rhs').val()}, 
           function(response){
-            var solution = response.replace(/=&gt;/g, "<br/>=&gt;<br/>");
+            var solution = ""
+            var answer = response[response.length-1];
+            var path = response.slice(0, response.length-1);
+            for (eq in path) {
+              var eqn = response[eq].equation;
+              solution+= eqn.lhs.expression + " = " + eqn.rhs.expression + "<br/>=><br/>"
+            }
+            solution+= answer.equation.lhs.expression + " = " + answer.equation.rhs.expression;
             $('#solution').html(solution);
-          });
+          }, 'json');
       });
     })
   </script>
