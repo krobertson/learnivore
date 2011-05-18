@@ -10,8 +10,6 @@ printEquation,
 Equations.valid,
 equationSize,
 equationTransformations,
-splitRootLeft,
-splitRootRight
 ) where
   
 import List
