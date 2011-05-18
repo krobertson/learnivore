@@ -98,7 +98,8 @@ equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransform
                           splitDivideLeft, splitAddLeft, splitAddLeft', splitSubtractLeft,
                           splitDivideRight, splitAddRight, splitAddRight', splitSubtractRight,
                           splitPowerRight, splitLogarithmRight, splitPowerLeft, splitLogarithmLeft,
-                          splitPowerRootLeft, splitPowerRootRight, subFromLeft, subFromRight, divFromLeft, divFromRight]
+                          splitPowerRootLeft, splitPowerRootRight, subFromLeft, subFromRight, 
+                          splitRootLeft, splitRootRight, divFromLeft, divFromRight]
                           
 
   -- (lifted expression transformations)
@@ -120,28 +121,32 @@ splitSubtractRight = invertRight Subtract Add
 
 splitPowerLeft = invertPowersLeft Power Logarithm
 splitPowerRight = invertPowersRight Power Logarithm
-splitLogarithmLeft = invertPowersLeft Logarithm Power
-splitLogarithmRight = invertPowersRight Logarithm Power
 splitPowerRootLeft = invertLeft Power NthRoot
 splitPowerRootRight = invertRight Power NthRoot
 
 invertPowersRight :: BinaryOp -> BinaryOp -> Equation -> [Equation]
-invertPowersRight opLeft opRight equation@(Equation (Binary op x y) rhs)
-                  | opLeft == op = [Equation y (Binary opRight x rhs)]
+invertPowersRight op inverse equation@(Equation (Binary op1 x y) rhs)
+                  | op == op1 = [Equation y (Binary inverse x rhs)]
                   | otherwise = [equation]
 invertPowersRight _ _ equation = [equation]
 
 invertPowersLeft :: BinaryOp -> BinaryOp -> Equation -> [Equation]
-invertPowersLeft opLeft opRight equation@(Equation lhs (Binary op x y))
-                 | opLeft == op = [Equation (Binary opLeft x lhs) y]
+invertPowersLeft op inverse equation@(Equation lhs (Binary op1 x y))
+                 | op == op1 = [Equation (Binary inverse x lhs) y]
                  | otherwise = [equation]
 invertPowersLeft _ _ equation = [equation]
 
-splitRootLeft (Equation (Binary NthRoot n x) rhs) = Equation x (Binary Power rhs n)
-splitRootLeft equation = equation
+splitRootLeft (Equation (Binary NthRoot n x) rhs) = [Equation x (Binary Power rhs n)]
+splitRootLeft equation = [equation]
 
-splitRootRight (Equation lhs (Binary NthRoot n x)) = Equation (Binary Power lhs n) x
-splitRootRight equation = equation
+splitRootRight (Equation lhs (Binary NthRoot n x)) = [Equation (Binary Power lhs n) x]
+splitRootRight equation = [equation]
+
+splitLogarithmLeft (Equation (Binary Logarithm base x) rhs) = [Equation x (Binary Power base rhs)]
+splitLogarithmLeft equation = [equation]
+
+splitLogarithmRight (Equation lhs (Binary Logarithm base x)) = [Equation (Binary Power base lhs) x]
+splitLogarithmRight equation = [equation]
 
 rotate :: Equation -> [Equation]
 rotate (Equation lhs rhs) = [Equation rhs lhs]

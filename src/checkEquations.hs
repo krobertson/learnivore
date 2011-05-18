@@ -30,7 +30,7 @@ preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow])
 
 algebraTests = TestLabel "Algebra Tests" (TestList [tVar1, tVar2, tVar3])
 
-bothSidesTests = TestLabel "Equation Operator Tests" (TestList [tAddBothSides, tSubBothSides, tMultBothSides, tDivBothSides, tLogBothSides, tPowBothSides, tPowBothSidesEdge, tNthRootBothSides, tFindLogarithmBase, tUnrootBothSides, tUnrootBothSides2])
+bothSidesTests = TestLabel "Equation Operator Tests" (TestList [tAddBothSides, tSubBothSides, tMultBothSides, tDivBothSides, tLogBothSides, tLogBothSidesEdge, tPowBothSides, tPowBothSidesEdge, tNthRootBothSides, tFindLogarithmBase, tUnrootBothSides, tUnrootBothSides2])
 
 
 testSolveEq sol lhs rhs = TestLabel ("Commutative test of " ++ lhs ++ " = " ++ rhs ++ " should equal: " ++ sol)
@@ -75,15 +75,17 @@ tDivBothSides = testSolveEq "x = 1.0" "x * 5" "5"
           
 tNthRootBothSides = testSolveEq "x = 2.0" "x^3" "8"
           
-tLogBothSides = testSolveEq "x = 2.0" "2^x" "4"          
+tLogBothSides = testSolveEq "x = 2.0" "2^x" "4"
+
+tLogBothSidesEdge = testSolveEq "x = 1.0" "2^x" "2"          
         
 tPowBothSidesEdge = testSolveEq "x = 2" "log<2>(x)" "1"
 
-tPowBothSides = testSolveEq "x = 2" "log<2>(8)" "3"
+tPowBothSides = testSolveEq "x = 16" "log<2>(x)" "4"
           
-tUnrootBothSides = testSolveEq "x = 8.0" "root<3>(x)" "2"
+tUnrootBothSides = testSolveEq "x = 8" "root<3>(x)" "2"
           
-tUnrootBothSides2 = testSolveEq "x = 8.0" "root<3>(x)" "2"
+tUnrootBothSides2 = testSolveEq "x = 3.0" "root<x>(8)" "2"
           
 tFindLogarithmBase = testSolveEq "x = 2.0" "log<x>(4)" "2"
 
