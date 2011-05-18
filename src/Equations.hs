@@ -9,7 +9,9 @@ printSolvedEquation,
 printEquation,
 Equations.valid,
 equationSize,
-equationTransformations
+equationTransformations,
+splitRootLeft,
+splitRootRight
 ) where
   
 import List
@@ -96,7 +98,7 @@ equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransform
                           splitDivideLeft, splitAddLeft, splitAddLeft', splitSubtractLeft,
                           splitDivideRight, splitAddRight, splitAddRight', splitSubtractRight,
                           splitPowerRight, splitLogarithmRight, splitPowerLeft, splitLogarithmLeft,
-                          subFromLeft, subFromRight, divFromLeft, divFromRight]
+                          splitPowerRootLeft, splitPowerRootRight, subFromLeft, subFromRight, divFromLeft, divFromRight]
                           
 
   -- (lifted expression transformations)
@@ -120,7 +122,8 @@ splitPowerLeft = invertPowersLeft Power Logarithm
 splitPowerRight = invertPowersRight Power Logarithm
 splitLogarithmLeft = invertPowersLeft Logarithm Power
 splitLogarithmRight = invertPowersRight Logarithm Power
-
+splitPowerRootLeft = invertLeft Power NthRoot
+splitPowerRootRight = invertRight Power NthRoot
 
 invertPowersRight :: BinaryOp -> BinaryOp -> Equation -> [Equation]
 invertPowersRight opLeft opRight equation@(Equation (Binary op x y) rhs)
@@ -133,6 +136,12 @@ invertPowersLeft opLeft opRight equation@(Equation lhs (Binary op x y))
                  | opLeft == op = [Equation (Binary opLeft x lhs) y]
                  | otherwise = [equation]
 invertPowersLeft _ _ equation = [equation]
+
+splitRootLeft (Equation (Binary NthRoot n x) rhs) = Equation x (Binary Power rhs n)
+splitRootLeft equation = equation
+
+splitRootRight (Equation lhs (Binary NthRoot n x)) = Equation (Binary Power lhs n) x
+splitRootRight equation = equation
 
 rotate :: Equation -> [Equation]
 rotate (Equation lhs rhs) = [Equation rhs lhs]

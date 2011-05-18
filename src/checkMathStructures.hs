@@ -7,7 +7,8 @@ main = runTestTT $ TestList (baseCaseTests:arithmeticCases:testRendering:[])
 
 baseCaseTests = TestLabel "Base Cases" (TestList [testInt, testConst, testVar, testVarExpr])
 arithmeticCases = TestLabel "Arithmetic Cases" (TestList [testAdd, testAddV, testAddDiff, testSub, 
-                                                          testMult, testDiv, testPow, testLog])
+                                                          testMult, testDiv, testPow, testLog, 
+                                                          testNthRoot, testNthRootAlternate])
                                                           
 testRendering = TestLabel "Rendering to JSON and HTML" (TestList [testJSON])
 testJSON = TestLabel "Rendering to JSON" (TestList [testJSONReadEq, testJSONShowEq])
@@ -86,3 +87,13 @@ testLog = TestCase $ assertEqual
           "should process an integer logarithm as an expression"
           "log<2>(4)" $
           processExpression show "log<2>(4)"
+          
+testNthRoot = TestCase $ assertEqual
+              "should process an integer nthRoot as an expression"
+              "<2>√(4)" $
+              processExpression show "<2>√(4)"
+          
+testNthRootAlternate = TestCase $ assertEqual
+                       "should process an integer nthRoot as an expression"
+                       "<2>√(4)" $
+                       processExpression show "root<2>(4)"

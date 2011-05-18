@@ -7,6 +7,7 @@ parseEquation,
 printEquation,
 printExpression,
 exmap,
+fromOkEq,
 Term(..),
 UnaryOp(..),
 BinaryOp(..),
@@ -44,6 +45,7 @@ data BinaryOp = Logarithm
               | Divide 
               | Add 
               | Subtract
+              | NthRoot
                 deriving (Eq, Ord)
             
 data SeqOp = SigmaSum | PiProduct deriving (Eq, Ord)
@@ -79,6 +81,7 @@ instance Show BinaryOp where
   show Divide = " / "
   show Power = "^"
   show Logarithm = "log"
+  show NthRoot = "√"
 
 instance Show Expression where
   show (Nullary term) = show term
@@ -150,6 +153,7 @@ showUnary Parens x = parenthesize $ show x
 
 showBinary :: BinaryOp -> Expression -> Expression -> String
 showBinary Logarithm b x = "log" ++ angleBracket (show b) ++ parenthesize (show x)
+showBinary NthRoot n x = angleBracket (show n) ++ "√" ++ parenthesize (show x)
 showBinary op x y = inBetween (showExpression op x) (show op) (showExpression op y)
 
 showSeq = undefined
@@ -245,6 +249,8 @@ exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Negate))]
              
 term = parenParser
        <|> logParser
+       <|> alternateRootParser
+       <|> nthRootParser
        <|> absParser
        <|> termParser
 
@@ -257,6 +263,16 @@ logParser = do string "log"
                base <- within '<' '>'
                expr <- within '(' ')'
                return (Binary Logarithm base expr)
+               
+nthRootParser = do n <- within '<' '>'
+                   string "√"
+                   expr <- within '(' ')'
+                   return (Binary NthRoot n expr)
+                   
+alternateRootParser = do string "root"
+                         n <- within '<' '>'
+                         expr <- within '(' ')'
+                         return (Binary NthRoot n expr)
          
 absParser = do x <- within '|' '|'
                return (Unary Absolute x)
@@ -284,4 +300,3 @@ TokenParser{ parens = m_parens
            , reserved = m_reserved
            , semiSep1 = m_semiSep1
            , whiteSpace = m_whiteSpace } = makeTokenParser def
-           

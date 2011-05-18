@@ -81,14 +81,14 @@ constSolved _ = False
 
 -- expressionTransformations
 expressionTransformations = [applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow,
-                             absolutify, addZero, multiplyByZero, multiplyByOne, distribute, 
-                             pop, negatify, collapseVars]
+                             applyRoot, absolutify, addZero, multiplyByZero, multiplyByOne,  
+                             distribute, pop, negatify, collapseVars]
 
--- root :: Expression -> Expression
--- root (Binary NthRoot n expr)
---      | isNumExpr n && isNumExpr expr = Unary (Constant ((value n) `nthRoot` (value expr)))
---      | otherwise = Binary NthRoot n expr
--- root x = x
+applyRoot :: Expression -> Expression
+applyRoot (Binary NthRoot n expr)
+          | isNumExpr n && isNumExpr expr = Nullary (Constant ((value n) `nthRoot` (value expr)))
+          | otherwise = Binary NthRoot n expr
+applyRoot x = x
 
 pop :: Expression -> Expression
 pop (Unary Parens x) = x
@@ -197,7 +197,7 @@ logNums = forNumsDouble Logarithm (logBase)
 
 
 -- helpers
-n `nthRoot` x = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)
+x `nthRoot` n = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)
 
 eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
 eitherOr fn x y = fn x || fn y

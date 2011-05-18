@@ -26,7 +26,7 @@ expressionTests = TestLabel "Expression Simplification Tests" (TestList [arithme
 -- 
 arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
 
-preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow])
+preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow, tRoot])
 
 algebraTests = TestLabel "Algebra Tests" (TestList [tVar1, tVar2, tVar3])
 
@@ -60,6 +60,11 @@ tLog = TestCase $ assertEqual
           "should log two integers"
           "2.0" $
           exprSolution  "log<2>(4)"
+          
+tRoot = TestCase $ assertEqual
+        "should log two integers"
+        "2.0" $
+        exprSolution "root<2>(4)"
           
 tAbs = TestCase $ assertEqual
           "should take the absolute value of a negative integer"
