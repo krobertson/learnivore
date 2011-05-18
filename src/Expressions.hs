@@ -58,7 +58,7 @@ twiddle transforms expression = if (not . solved $ expression)
 expressionSize :: Expression -> Integer
 expressionSize (Nullary term) = 1
 expressionSize (Unary operator expr) = 1 + expressionSize expr
-expressionSize (Binary operator leftExpr rightExpr) = sum [1, expressionSize leftExpr, expressionSize rightExpr]
+expressionSize (Binary operator leftExpr rightExpr) = sum [expressionSize leftExpr, expressionSize rightExpr]
 
 -- solution checkers
 solved :: Expression -> Bool
