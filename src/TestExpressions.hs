@@ -1,3 +1,6 @@
+module TestExpressions
+(testExpressions, expressionTests) where
+  
 -- import System.Random
 -- import IO.Unsafe
 -- import TypeLevel.NaturalNumber
@@ -20,7 +23,8 @@ import Test.HUnit
 -- unwrapAD :: ApproximateDouble Double -> Double
 -- unwrapAD = unwrapAbsolutelyApproximateValue
 
-main = runTestTT $ expressionTests
+main = testExpressions
+testExpressions = runTestTT $ expressionTests
 -- 
 expressionTests = TestLabel "Expression Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests])
 -- 
@@ -62,8 +66,8 @@ tLog = TestCase $ assertEqual
           exprSolution  "log<2>(4)"
           
 tRoot = TestCase $ assertEqual
-        "should log two integers"
-        "2.0" $
+        "should take the nth root of two integers"
+        "1.189207115002721" $
         exprSolution "root<2>(4)"
           
 tAbs = TestCase $ assertEqual

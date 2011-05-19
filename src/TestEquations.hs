@@ -1,3 +1,6 @@
+module TestEquations
+(testEquations, equationTests) where
+  
 -- import System.Random
 -- import IO.Unsafe
 -- import TypeLevel.NaturalNumber
@@ -20,7 +23,8 @@ import Test.HUnit
 -- unwrapAD :: ApproximateDouble Double -> Double
 -- unwrapAD = unwrapAbsolutelyApproximateValue
 
-main = runTestTT $ equationTests
+main = testEquations
+testEquations = runTestTT $ equationTests
 -- 
 equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations])
 -- 

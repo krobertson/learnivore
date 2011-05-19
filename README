@@ -2,11 +2,13 @@ run cabal install in this directory to install learnivore,
   then execute with learnivore -p 8000
   then go to localhost:8000
   then input an equation
-from ghci, :l Equations
+  
+for interactive console access, cd into src, load ghci, and run :l Equations
   and use solveExpression to simplify arithmetic and algebraic expressions from strings
-  and use solveEquation to solve arithmetic and algebraic equations from strings*
+  and use solveEquation to solve arithmetic and algebraic equations from strings
 
-*For now, please make sure that = sign has no spaces around it (eg. 2 * x=5 * 2; NOT 2 * x = 5 * 2)
+to run the test suite, cd into src, load ghci, and run :l Tests
+  
 
 Current Functionality:
 ----------------------
@@ -14,32 +16,65 @@ Current Functionality:
 Solves algebraic equations of one variable
 Example:
 
-Please enter an equation:
-2^x=4
+
+putStrLn $ solveEquation "2^x=4"
 ------------------
 2.0^x = 4.0
 =>
 x = log<2.0>(4.0)
 =>
 x = 2.0
-"=> Equation is True!"
+
+putStrLn $ solveEquation "2^x+1=log<2>(8)"
+-------------------
+(2^x) + 1 = log<2>(8)
+=>
+(2^x) + 1 = 3.0
+=>
+2^x = 3.0 - 1
+=>
+2^x = 2.0
+=>
+x = log<2>(2.0)
+=>
+x = 1.0
+
+putStrLn $ solveEquation "x^3+5=32"
+--------------------
+(x^3) + 5 = 32
+=>
+x^3 = 32 - 5
+=>
+x^3 = 27
+=>
+x = <3>√(27)
+=>
+x = 3.0
+
+
 
 future plans:
 -------------
 DRY the expression and equation transformations up
 
-write an algebraic expression generator as a bfw, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
+write an algebraic expression generator as a markov chain, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
 set up QuickCheck for testing (using HUnit for now)
 
-include all log and power equivalencies, add all the trigonometric functions, e, i, pi, factorial, and functions on complex numbers
+add all the trigonometric functions, e, pi, factorial, i, and other operations on complex numbers 
 
 combinatorics, derivatives, integrals, logic, higher maths
 
-systems of equations
+systems of equations, linear algebra
 
 Snap
   - expose as a json api
-    - solve expression (expression -> (expression, pathToSolution))
-    - generate complex expression (expression, pathToSolution, solution, generators)
-    - verify solution (expression -> solution)
+    - Equations
+      - solve (*DONE*)
+      - generate
+      - verify solution (expression -> solution)
+    - Expressions
+      - simplify
+      - generate
+      - verify solution
+    - Quiz Stream

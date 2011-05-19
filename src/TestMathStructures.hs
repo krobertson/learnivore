@@ -1,9 +1,15 @@
+module TestMathStructures
+(testMathStructures, mathStructureTests) where
+
 import MathStructures
 import LearnMath
 import Test.HUnit
 import Text.JSON
          
-main = runTestTT $ TestList (baseCaseTests:arithmeticCases:testRendering:[])
+main = testMathStructures
+testMathStructures = runTestTT $ mathStructureTests
+
+mathStructureTests = TestList ([testRendering, baseCaseTests,arithmeticCases])
 
 baseCaseTests = TestLabel "Base Cases" (TestList [testInt, testConst, testVar, testVarExpr])
 arithmeticCases = TestLabel "Arithmetic Cases" (TestList [testAdd, testAddV, testAddDiff, testSub, 
@@ -39,7 +45,7 @@ testVar = TestCase $ assertEqual
           processExpression show "x"
           
 testVarExpr = TestCase $ assertEqual
-          "should process a single variable as an expression"
+          "should process an adjacent number and a variable as an expression"
           "2*x" $
           processExpression show "2x"
           
