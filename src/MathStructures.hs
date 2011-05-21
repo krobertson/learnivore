@@ -59,8 +59,8 @@ data Expression = Nullary Term
             deriving (Eq, Ord)
 
 data Equation = Equation Expression Expression deriving (Eq, Ord)
-data Solution = Solution (Maybe [Expression]) 
-data SolvedEquation = SolvedEquation (Maybe [Equation])
+data Solution = Solution (Maybe [(String, Expression)]) 
+data SolvedEquation = SolvedEquation (Maybe [(String, Equation)])
 
 topLevelExprs op expr@(Binary op1 l r)
               | op == op1 = topLevelExprs' op expr
@@ -114,7 +114,7 @@ instance Show SolvedEquation where
   show = showSolvedEquation
   
 instance JSON SolvedEquation where
-  showJSON (SolvedEquation (Just xs)) = JSArray (map showJSON xs)
+  showJSON (SolvedEquation (Just xs)) = JSArray (map (\x -> JSArray [JSString . toJSString . fst $ x, showJSON (snd x)]) xs)
   readJSON json = makeSolvedEquation (fromOkVal (readJSON json))
   
 instance JSON Expression where
@@ -140,7 +140,7 @@ makeEquation json = let (!) = flip valFromObj in do
     return (Equation lhs rhs)
     
 makeSolvedEquation :: [JSValue] -> Result SolvedEquation
-makeSolvedEquation jsValues = return (SolvedEquation (Just (map (fromOkEq . readJSON) jsValues)::Maybe [Equation]))
+makeSolvedEquation jsValues = return (SolvedEquation (Just (map (\x -> ("", (fromOkEq . readJSON) x)) jsValues)::Maybe [(String, Equation)]))
     
 fromOk :: Result (JSObject JSValue) -> (JSObject JSValue)
 fromOk (Text.JSON.Ok json) = json
@@ -174,12 +174,22 @@ showBinary op x y = inBetween (showExpression op x) (show op) (showExpression op
 
 showSeq = undefined
 
+joinFn :: (Show a) => (String -> String) -> [(String, a)] -> String 
+joinFn fn [] = []
+joinFn fn (x:[]) = show $ snd x
+joinFn fn (x:xs) = joinFn fn [x] ++ joinFn' fn xs
+
+joinFn' :: (Show a) => (String -> String) -> [(String, a)] -> String
+joinFn' fn [] = []
+joinFn' fn (x:[]) = fn (fst x) ++ (show $ snd x)
+joinFn' fn (x:xs) = (joinFn' fn [x]) ++ joinFn' fn xs
+
 showSolution :: Solution -> String
-showSolution (Solution (Just xs)) = join "\n=>\n" (map show xs)
+showSolution (Solution (Just xs)) = joinFn (\x -> "\n=> " ++ x ++ "\n") xs
 showSolution (Solution Nothing) = "There is no valid solution"
   
 showSolvedEquation :: SolvedEquation -> String
-showSolvedEquation (SolvedEquation (Just xs)) = join "\n=>\n" (map show xs)
+showSolvedEquation (SolvedEquation (Just xs)) = joinFn (\x -> "\n=> " ++ x ++ "\n") xs
 showSolvedEquation (SolvedEquation Nothing) = "There is no valid solution"
 
 printEquation :: String -> IO ()
@@ -217,13 +227,16 @@ parseEquation inp = case parse eqnparser "" inp of
                          } 
                          
 -- traversal functions
-exmap :: (Expression -> Expression) -> Expression -> [Expression]
-exmap fn (Nullary term) = [fn $ Nullary term]
-exmap fn (Unary operator expr) = [fn $ Unary operator expr] ++ map (\x -> Unary operator x) (exmap fn expr)
-exmap fn (Binary operator leftExpression rightExpression) = [fn $ Binary operator leftExpression rightExpression]
-                                                            ++ (map (\x -> Binary operator leftExpression x) 
+namedApply :: (String, (a -> b)) -> a -> (String, b)
+namedApply fn x = (fst fn, snd fn $ x)
+
+exmap :: (String, (Expression -> Expression)) -> Expression -> [(String, Expression)]
+exmap fn (Nullary term) = [fn `namedApply` (Nullary term)]
+exmap fn (Unary operator expr) = [fn `namedApply` (Unary operator expr)] ++ map (\x -> (fst x, Unary operator (snd x))) (exmap fn expr)
+exmap fn (Binary operator leftExpression rightExpression) = [fn `namedApply` Binary operator leftExpression rightExpression]
+                                                            ++ (map (\x -> (fst x, Binary operator leftExpression (snd x))) 
                                                                  (exmap fn rightExpression))
-                                                            ++ (map (\x -> Binary operator x rightExpression) 
+                                                            ++ (map (\x -> (fst x, Binary operator (snd x) rightExpression)) 
                                                                  (exmap fn leftExpression))
 
 

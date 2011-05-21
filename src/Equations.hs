@@ -31,22 +31,22 @@ eqnSolution = processEquation getEqnSolution
 
 answer :: SolvedEquation -> Equation
 answer (SolvedEquation x) = case x of
-                                  (Just xs) -> last xs
-                                  (Nothing) -> Equation (Nullary (Integ 1)) (Nullary (Integ 0))
+                                 (Just xs) -> snd. last $ xs
+                                 (Nothing) -> Equation (Nullary (Integ 1)) (Nullary (Integ 0))
 
 onThePath :: Equation -> Equation -> Bool
 onThePath x y = x == answer (equateEq x y)
 
 searchEq :: (Equation -> Bool) -> (Equation -> Integer) -> Equation -> SolvedEquation
-searchEq goalTest heuristicFn equation = SolvedEquation (case solutionPath of (Just path) -> Just (equation:path)
+searchEq goalTest heuristicFn equation = SolvedEquation (case solutionPath of (Just path) -> Just (("Initial Equation", equation):path)
                                                                               Nothing -> Nothing)
                                                               where solutionPath = if goalTest equation 
-                                                                                   then Just [equation] 
-                                                                                   else aStar equationGraph 
+                                                                                   then Just [("Final Equation", equation)] 
+                                                                                   else aStar (equationGraph . snd) 
                                                                                               (\x y -> 1) 
-                                                                                              heuristicFn
-                                                                                              goalTest
-                                                                                              equation
+                                                                                              (heuristicFn . snd)
+                                                                                              (goalTest . snd)
+                                                                                              ("Initial Equation", equation)
                                       
 solveEq :: Equation -> SolvedEquation                                                     
 solveEq = searchEq solvedEq equationSize
@@ -62,30 +62,27 @@ solvedEq (Equation lhs rhs)
         | constSolved lhs && constSolved rhs = True
         | otherwise = False
         
-equationGraph :: Equation -> Set Equation
+equationGraph :: Equation -> Set (String, Equation)
 equationGraph = fromList . expandEq
 
-expandEq :: Equation -> [Equation]
+expandEq :: Equation -> [(String, Equation)]
 expandEq = twiddleEq equationTransformations
 
-twiddleEq :: [Equation -> [Equation]] -> Equation -> [Equation]
+namedEqApply :: (String, (Equation -> [Equation])) -> Equation -> [(String, Equation)]
+namedEqApply fn eq = List.map (\x -> (fst fn, x)) (snd fn $ eq)
+
+twiddleEq :: [(String, Equation -> [Equation])] -> Equation -> [(String, Equation)]
 twiddleEq transforms equation = if (not . solvedEq $ equation) 
-                                then List.filter (not . (== equation)) $
-                                     List.concat $ List.map ($ equation) transforms
+                                then List.filter (not . (== equation) . snd) $
+                                     List.concat $ List.map (\fn -> namedEqApply fn equation)  transforms
                                 else []
                               
 equationSize :: Equation -> Integer
 equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
 
-liftExprTLeft :: (Expression -> Expression) -> Equation -> [Equation]
-liftExprTLeft fn (Equation lhs rhs) = List.map (\x -> Equation x rhs) (exmap fn lhs)
-
-liftExprTRight :: (Expression -> Expression) -> Equation -> [Equation]
-liftExprTRight fn (Equation lhs rhs) = List.map (\x -> Equation lhs x) (exmap fn rhs)
-
 getEqnSolution :: Equation -> String
 getEqnSolution x = case (solveEq x) of
-                        SolvedEquation (Just sol) -> show (last sol)
+                        SolvedEquation (Just sol) -> show (snd . last $ sol)
                         SolvedEquation (Nothing) -> "No Solution"
 
 printSolvedEquation :: String -> IO ()
@@ -94,14 +91,23 @@ printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ 
 -- Equation Transformations
 
 equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransformations ++
-                         [rotate, splitMultiply, splitDivide, splitAdd, splitSubtract,
-                          splitPowerRight, splitLogarithmRight, splitPowerLeft, splitLogarithmLeft,
-                          splitPowerRoot, splitRootLeft, splitRootRight, shiftSubtract, shiftDivide]
+                         [("Swapping Sides", rotate), ("Splitting Multiplication", splitMultiply), 
+                          ("Splitting Division", splitDivide), ("Splitting Addition", splitAdd), 
+                          ("Splitting Subtraction", splitSubtract), ("Splitting Exponentiation", splitPowerRight), 
+                          ("Splitting Logarithms", splitLogarithmRight), ("Splitting Exponentiation", splitPowerLeft), 
+                          ("Spitting Logarithms", splitLogarithmLeft), ("Taking the Root", splitPowerRoot), 
+                          ("Splitting an Nth Root", splitRootLeft), ("Splitting an Nth Root", splitRootRight), 
+                          ("Subtracting from one side", shiftSubtract), ("Dividing from one side", shiftDivide)]
                           
 
   -- (lifted expression transformations)
-lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> List.map (\x -> Equation x rhs) (exmap fn lhs)) expressionTransformations
-rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> List.map (\x -> Equation lhs x) (exmap fn rhs)) expressionTransformations
+lhsExpressionTransformations = List.map liftExprTransform expressionTransformations
+rhsExpressionTransformations = List.map liftExprTransform expressionTransformations
+
+liftExprTransform :: (String, Expression -> Expression) -> (String, Equation -> [Equation])
+liftExprTransform fn = (fst fn, (\eq@(Equation lhs rhs) -> let (ls, rs) = ((exmap fn lhs), (exmap fn rhs))
+                                                           in (List.map (\x -> Equation lhs (snd x)) rs) ++
+                                                              (List.map (\x -> Equation (snd x) rhs) ls)))
 
 splitMultiply = invert Multiply Divide
 splitAdd = invert Add Subtract
@@ -169,7 +175,7 @@ valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)
 
 validSolution :: SolvedEquation -> Bool
 validSolution (SolvedEquation Nothing) = False
-validSolution (SolvedEquation (Just xs)) = Equations.valid . last $ xs 
+validSolution (SolvedEquation (Just xs)) = Equations.valid . snd . last $ xs 
 
 solvedString :: SolvedEquation -> String
 solvedString solvedEquation

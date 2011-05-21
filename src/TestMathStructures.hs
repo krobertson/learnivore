@@ -9,7 +9,7 @@ import Text.JSON
 main = testMathStructures
 testMathStructures = runTestTT $ mathStructureTests
 
-mathStructureTests = TestList ([testRendering, baseCaseTests,arithmeticCases, testTopLevelExprsAdd])
+mathStructureTests = TestList ([testRendering, baseCaseTests,arithmeticCases, testTopLevelExprsAdd, testRendering])
 
 baseCaseTests = TestLabel "Base Cases" (TestList [testInt, testConst, testVar, testVarExpr])
 arithmeticCases = TestLabel "Arithmetic Cases" (TestList [testAdd, testAddV, testAddDiff, testSub, 

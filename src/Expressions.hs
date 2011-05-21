@@ -21,15 +21,15 @@ import Data.Graph.AStar
 import MathStructures  
       
 solve :: Expression -> Solution
-solve expression = Solution (case solutionPath of (Just path) -> Just (expression:path)
+solve expression = Solution (case solutionPath of (Just path) -> Just (("Initial Expression", expression):path)
                                                   Nothing -> Nothing)
                      where solutionPath = if solved expression 
-                                          then Just [expression] 
-                                          else aStar expressionGraph 
+                                          then Just [("Final Expression", expression)] 
+                                          else aStar (expressionGraph . snd)
                                                      (\x y -> 1) 
-                                                     expressionSize 
-                                                     solved 
-                                                     expression
+                                                     (expressionSize . snd)
+                                                     (solved . snd) 
+                                                     ("Initial Expression", expression)
   
 
 solveExpression :: String -> String
@@ -39,21 +39,21 @@ exprSolution :: String -> String
 exprSolution = processExpression getExprSolution
 
 getExprSolution x = case (solve x) of
-                         Solution (Just sol) -> show (last sol)
+                         Solution (Just sol) -> show (snd . last $ sol)
                          Solution (Nothing) -> "No Solution"
 
 printSolvedExpression :: String -> IO ()
 printSolvedExpression = putStrLn . solveExpression
 
-expand :: Expression -> [Expression]
+expand :: Expression -> [(String, Expression)]
 expand = twiddle $ List.map exmap expressionTransformations
 
-expressionGraph :: Expression -> Set Expression                          
+expressionGraph :: Expression -> Set (String, Expression)
 expressionGraph = fromList . expand
 
-twiddle :: [Expression -> [Expression]] -> Expression -> [Expression]
+twiddle :: [Expression -> [(String, Expression)]] -> Expression -> [(String, Expression)]
 twiddle transforms expression = if (not . solved $ expression) 
-                                then List.filter (not . (== expression)) $
+                                then List.filter (not . (== expression) . snd) $
                                      List.concat $ List.map ($ expression) transforms
                                 else []
 
@@ -82,9 +82,15 @@ constSolved (Nullary (Integ _)) = True
 constSolved _ = False
 
 -- expressionTransformations
-expressionTransformations = [applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow,
-                             applyRoot, absolutify, addZero, multiplyByZero, multiplyByOne,  
-                             distribute, pop, negatify, logInverse, powInverse, collapseVars]
+expressionTransformations = [("Adding", applyAdd), ("Subtracting", applySub), 
+                             ("Multiplying", applyMult), ("Dividing", applyDiv), 
+                             ("Taking the Logarithm", applyLog), ("Exponentiating", applyPow),
+                             ("Taking the Nth Root", applyRoot), ("Taking the Absolute Value", absolutify), 
+                             ("Adding Zero", addZero), ("Multiplying By Zero", multiplyByZero), 
+                             ("Multiplying By One", multiplyByOne), ("Distribute Law of Multiplication", distribute), 
+                             ("Removing Parentheses", pop), ("Negation", negatify), 
+                             ("Inverse Law of Logarithms", logInverse), ("Inverse Law of Powers", powInverse), 
+                             ("Collapsing Variables", collapseVars)]
 
 applyRoot :: Expression -> Expression
 applyRoot (Binary NthRoot n expr)
@@ -128,6 +134,7 @@ negatify x = x
 
 distribute :: Expression -> Expression
 distribute (Binary Multiply (Binary Add x y) z) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
+distribute (Binary Multiply z (Binary Add x y)) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
 distribute x = x
 
 logInverse :: Expression -> Expression

@@ -20,14 +20,14 @@
       $('#submit').click(function(x) {
         $.post('/solveJSON', {"eqn": $('#lhs').val()+"="+$('#rhs').val()}, 
           function(response){
-            var solution = ""
-            var answer = response[response.length-1];
-            var path = response.slice(0, response.length-1);
+            var solution = "";
+            var start = response[0][1];
+            var path = response.slice(1, response.length+1);
             for (eq in path) {
-              var eqn = response[eq].equation;
-              solution+= eqn.lhs.expression + " = " + eqn.rhs.expression + "<br/>=><br/>"
+              var eqn = path[eq][1].equation;
+              solution+= "<br/>=> " + path[eq][0] + "<br/>" + eqn.lhs.expression + " = " + eqn.rhs.expression;
             }
-            solution+= answer.equation.lhs.expression + " = " + answer.equation.rhs.expression;
+            solution= start.equation.lhs.expression + " = " + start.equation.rhs.expression + solution;
             $('#solution').html(solution);
           }, 'json');
       });
