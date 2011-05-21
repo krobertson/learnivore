@@ -9,7 +9,7 @@ import Text.JSON
 main = testMathStructures
 testMathStructures = runTestTT $ mathStructureTests
 
-mathStructureTests = TestList ([testRendering, baseCaseTests,arithmeticCases])
+mathStructureTests = TestList ([testRendering, baseCaseTests,arithmeticCases, testTopLevelExprsAdd])
 
 baseCaseTests = TestLabel "Base Cases" (TestList [testInt, testConst, testVar, testVarExpr])
 arithmeticCases = TestLabel "Arithmetic Cases" (TestList [testAdd, testAddV, testAddDiff, testSub, 
@@ -46,7 +46,7 @@ testVar = TestCase $ assertEqual
           
 testVarExpr = TestCase $ assertEqual
           "should process an adjacent number and a variable as an expression"
-          "2*x" $
+          "2 * x" $
           processExpression show "2x"
           
 testAdd = TestCase $ assertEqual
@@ -103,3 +103,8 @@ testNthRootAlternate = TestCase $ assertEqual
                        "should process an integer nthRoot as an expression"
                        "<2>√(4)" $
                        processExpression show "root<2>(4)"
+                       
+testTopLevelExprsAdd = TestCase $ assertEqual
+                       "should be able to break apart a tree into a list of all expressions using that op at the toplevel"
+                       ["1","2", "3"] $
+                       map show (topLevelExprs Add (parseExpression "1+2+3"))

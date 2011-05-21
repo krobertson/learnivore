@@ -10,7 +10,9 @@ solveExpression,
 printSolvedExpression,
 printExpression,
 singleVariable,
-constSolved
+constSolved,
+isOperation,
+isTerm
 ) where
   
 import List
@@ -82,7 +84,7 @@ constSolved _ = False
 -- expressionTransformations
 expressionTransformations = [applyAdd, applySub, applyMult, applyDiv, applyLog, applyPow,
                              applyRoot, absolutify, addZero, multiplyByZero, multiplyByOne,  
-                             distribute, pop, negatify, collapseVars]
+                             distribute, pop, negatify, logInverse, powInverse, collapseVars]
 
 applyRoot :: Expression -> Expression
 applyRoot (Binary NthRoot n expr)
@@ -127,6 +129,14 @@ negatify x = x
 distribute :: Expression -> Expression
 distribute (Binary Multiply (Binary Add x y) z) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
 distribute x = x
+
+logInverse :: Expression -> Expression
+logInverse expr@(Binary Logarithm x (Binary Power x1 y)) = if x == x1 then y else expr
+logInverse x = x
+
+powInverse :: Expression -> Expression
+powInverse expr@(Binary Power x (Binary Logarithm x1 y)) = if x == x1 then y else expr
+powInverse x = x
 
 collapseVars :: Expression -> Expression
 collapseVars (Binary Add x y)
@@ -216,6 +226,10 @@ isOne :: Term -> Bool
 isOne (Integ 1) = True
 isOne (Constant 1.0) = True
 isOne _ = False
+
+isOperation :: BinaryOp -> Expression -> Bool
+isOperation op1 (Binary op2 _ _) = op1 == op2
+isOperation _ _ = False
 
 isVariable :: Term -> Bool
 isVariable (Variable _) = True

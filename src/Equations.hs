@@ -11,12 +11,14 @@ Equations.valid,
 equationSize,
 equationTransformations,
 ) where
-  
+
 import List
 import Data.Set
 import Data.Graph.AStar
 import MathStructures
 import Expressions
+
+-- echo x = trace (show x) x
 
 equivalentEquations :: String -> String -> String
 equivalentEquations inp = processEquation (show . answer . equateEq (parseEquation inp))
@@ -92,11 +94,9 @@ printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ 
 -- Equation Transformations
 
 equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransformations ++
-                         [rotate, multByOneLeft, multByOneRight, addZeroLeft, addZeroRight, splitMultiply, 
-                          splitMultiply', splitDivide, splitAdd, splitAdd', splitSubtract,
+                         [rotate, splitMultiply, splitDivide, splitAdd, splitSubtract,
                           splitPowerRight, splitLogarithmRight, splitPowerLeft, splitLogarithmLeft,
-                          splitPowerRoot, subFromLeft, subFromRight, 
-                          splitRootLeft, splitRootRight, divFromLeft, divFromRight]
+                          splitPowerRoot, splitRootLeft, splitRootRight, shiftSubtract, shiftDivide]
                           
 
   -- (lifted expression transformations)
@@ -104,11 +104,9 @@ lhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> List.map (\x -
 rhsExpressionTransformations = List.map (\fn (Equation lhs rhs)-> List.map (\x -> Equation lhs x) (exmap fn rhs)) expressionTransformations
 
 splitMultiply = invert Multiply Divide
-splitMultiply' = invert' Multiply Divide
 splitAdd = invert Add Subtract
-splitAdd' = invert' Add Subtract
-splitDivide = invert Divide Multiply
-splitSubtract = invert Subtract Add
+splitDivide = invert' Divide Multiply
+splitSubtract = invert' Subtract Add
 
 splitPowerLeft = invertPowersLeft Power Logarithm
 splitPowerRight = invertPowersRight Power Logarithm
@@ -141,45 +139,27 @@ splitLogarithmRight equation = [equation]
 rotate :: Equation -> [Equation]
 rotate (Equation lhs rhs) = [Equation rhs lhs]
 
-subFromLeft = toRight Subtract (Nullary (Integ 0))
-subFromRight = toLeft Subtract (Nullary (Integ 0))
-divFromLeft = toRight Divide (Nullary (Integ 1))
-divFromRight = toLeft Multiply (Nullary (Integ 1))
-
-multByOneLeft = liftExprTLeft (\x -> (Binary Multiply (Nullary (Integ 1)) x))
-multByOneRight = liftExprTRight (\x -> (Binary Multiply (Nullary (Integ 1)) x))
-addZeroLeft = liftExprTLeft (\x -> (Binary Add (Nullary (Integ 0)) x))
-addZeroRight = liftExprTRight (\x -> (Binary Add (Nullary (Integ 0)) x))
+shiftSubtract = shift Subtract (Nullary (Integ 0))
+shiftDivide = shift Divide (Nullary (Integ 1))
 
 invert :: BinaryOp -> BinaryOp -> Equation -> [Equation]
-invert op inverse (Equation lhs@(Binary op2 xl yl) rhs@(Binary op3 xr yr))
-       | op == op2 && op2 == op3 = [Equation (Binary inverse lhs yr) xr, Equation xl (Binary inverse rhs yl)]
-       | otherwise = [Equation lhs rhs]
-invert op inverse equation@(Equation lhs (Binary op2 x y))
-       | op == op2 = [Equation (Binary inverse lhs y) x]
-       | otherwise = [equation]
-invert op inverse equation@(Equation lhs@(Binary op2 x y) rhs)
-       | op == op2 = [Equation x (Binary inverse rhs y)]
-       | otherwise = [equation]
-invert _ _ eqn = [eqn]
-
+invert op inverse eq@(Equation lhs rhs) = invertL ++ invertR
+                                           where invertL = (List.map (\x -> Equation (treeify op (ls List.\\ [x])) (Binary inverse rhs x)) ls)
+                                                 invertR = (List.map (\x -> Equation (Binary inverse rhs x) (treeify op (rs List.\\ [x]))) rs)
+                                                 ls = topLevelExprs op lhs
+                                                 rs = topLevelExprs op rhs
+                                              
 invert' :: BinaryOp -> BinaryOp -> Equation -> [Equation]
-invert' op inverse (Equation lhs@(Binary op2 xl yl) rhs@(Binary op3 xr yr))
-        | op == op2 && op2 == op3 = [Equation (Binary inverse lhs xr) yr, Equation yl (Binary inverse rhs xl)]
-        | otherwise = [Equation lhs rhs]
-invert' op inverse equation@(Equation lhs (Binary op2 x y))
-        | op == op2 = [Equation (Binary inverse lhs x) y]
-        | otherwise = [equation]
-invert' op inverse equation@(Equation (Binary op2 x y) rhs)
-        | op == op2 = [Equation y (Binary inverse rhs x)]
-        | otherwise = [equation]
-invert' _ _ eqn = [eqn]
+invert' op inverse eq@(Equation lhs rhs) = invertL' ++ invertR'
+                                            where invertL' = if ls == [] then [] else (List.map (\x -> Equation (treeify op (l:((tail ls) List.\\ [x]))) (Binary inverse rhs x)) $ tail ls)
+                                                  invertR' = if rs == [] then [] else (List.map (\x -> Equation (Binary inverse lhs x) (treeify op (r:((tail rs) List.\\ [x])))) $ tail rs)
+                                                  ls = topLevelExprs op lhs
+                                                  rs = topLevelExprs op rhs
+                                                  l = head ls
+                                                  r = head rs
 
-toRight :: BinaryOp -> Expression -> Equation -> [Equation]
-toRight op unit (Equation lhs rhs) = [(Equation unit (Binary op rhs lhs))]
-
-toLeft :: BinaryOp -> Expression -> Equation -> [Equation]
-toLeft op unit (Equation lhs rhs) = [(Equation (Binary op lhs rhs) unit)]
+shift :: BinaryOp -> Expression -> Equation -> [Equation]
+shift op unit (Equation lhs rhs) = [Equation unit (Binary op rhs lhs), Equation (Binary op lhs rhs) unit]
 
 -- Validity
 valid :: Equation -> Bool

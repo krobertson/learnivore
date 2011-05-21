@@ -8,6 +8,8 @@ printEquation,
 printExpression,
 exmap,
 fromOkEq,
+topLevelExprs,
+treeify,
 Term(..),
 UnaryOp(..),
 BinaryOp(..),
@@ -60,6 +62,20 @@ data Equation = Equation Expression Expression deriving (Eq, Ord)
 data Solution = Solution (Maybe [Expression]) 
 data SolvedEquation = SolvedEquation (Maybe [Equation])
 
+topLevelExprs op expr@(Binary op1 l r)
+              | op == op1 = topLevelExprs' op expr
+              | otherwise = []
+topLevelExprs _ _ = []
+
+topLevelExprs' op expr@(Binary op1 l r)
+              | op1 == op = topLevelExprs' op l ++ topLevelExprs' op r
+              | otherwise = [expr]
+topLevelExprs' _ expr = [expr]
+
+treeify :: BinaryOp -> [Expression] -> Expression
+treeify op = foldl1 (\x y -> (Binary op x y))
+                        
+                       
 -- instance declarations
 instance Eq Term where
   (Variable x) == (Variable y) = x == y
@@ -210,6 +226,7 @@ exmap fn (Binary operator leftExpression rightExpression) = [fn $ Binary operato
                                                             ++ (map (\x -> Binary operator x rightExpression) 
                                                                  (exmap fn leftExpression))
 
+
 -- show helpers 
 
 printBetween :: (Show a) => String -> [a] -> IO ()
@@ -280,9 +297,14 @@ absParser = do x <- within '|' '|'
 parenParser = do x <- m_parens exprparser
                  return (Unary Parens x)
                  
-termParser = liftM (Nullary . Variable) m_identifier
-             <|> liftM (Nullary . Integ) m_natural
-             <|> liftM (Nullary . Constant) m_float
+termParser = try floatParser <|> try varExprParser <|> intParser <|> varParser
+             
+floatParser = liftM (Nullary . Constant) m_float
+intParser = liftM (Nullary . Integ) m_natural
+varExprParser = do x <- (try floatParser) <|> intParser
+                   var <- varParser
+                   return (Binary Multiply x var)
+varParser = liftM (Nullary . Variable) m_identifier
 
 def = emptyDef{ identStart = letter
               , identLetter = oneOf $ ['1'..'9']

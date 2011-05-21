@@ -8,7 +8,7 @@ for interactive console access, cd into src, load ghci, and run :l Equations
   and use solveEquation to solve arithmetic and algebraic equations from strings
 
 to run the test suite, cd into src, load ghci, and run :l Tests
-  
+
 
 Current Functionality:
 ----------------------

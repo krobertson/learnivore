@@ -30,7 +30,7 @@ expressionTests = TestLabel "Expression Simplification Tests" (TestList [arithme
 -- 
 arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
 
-preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow, tRoot])
+preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow, tRoot, tLogBase, tPowBase])
 
 algebraTests = TestLabel "Algebra Tests" (TestList [tVar1, tVar2, tVar3])
 
@@ -64,6 +64,16 @@ tLog = TestCase $ assertEqual
           "should log two integers"
           "2.0" $
           exprSolution  "log<2>(4)"
+        
+tLogBase = TestCase $ assertEqual
+              "should handle log<y>(y^x)"
+              "x" $
+              exprSolution  "log<y>(y^x)"
+              
+tPowBase = TestCase $ assertEqual
+              "should handle y^(log<y>(x))"
+              "x" $
+              exprSolution  "log<y>(y^x)"
           
 tRoot = TestCase $ assertEqual
         "should take the nth root of two integers"
