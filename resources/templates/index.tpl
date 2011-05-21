@@ -7,7 +7,7 @@
   <body>
     <div id="content">
       <form action="solve">
-      Input an equation to solve: <input type="text" name="lhs" id="lhs"> = <input type="text" name="rhs" id="rhs">
+      Input an equation to solve: <input type="text" name="lhs" id="lhs"/> = <input type="text" name="rhs" id="rhs"/>
       <input type="button" value="Submit" id="submit"/>
       </form>
     </div>

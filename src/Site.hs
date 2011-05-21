@@ -42,6 +42,9 @@ index = ifTop $ heistLocal (bindSplices indexSplices) $ render "index"
 
 ------------------------------------------------------------------------------
 -- | Renders the solution.
+quiz :: Application ()
+quiz = do render "quiz"
+
 solve :: Application ()
 solve = do eqn <- decodedParam "eqn"
            heistLocal (bindString "solution" $ T.decodeUtf8 $ withByteString renderEqSolution eqn) $ render "solve"
@@ -50,10 +53,15 @@ solve = do eqn <- decodedParam "eqn"
           
 solveJSON :: Application ()
 solveJSON = do eqn <- decodedParam "eqn"
-               heistLocal (bindString "solution" $ T.decodeUtf8 $ withByteString renderEqSolutionJSON eqn) $ render "solveJSON"
+               heistLocal (bindString "json" $ T.decodeUtf8 $ withByteString renderEqSolutionJSON eqn) $ render "json"
             where
               decodedParam p = fromMaybe "" <$> getParam p
 
+getQuestionJSON :: Application ()
+getQuestionJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ B.pack . BS.encode $ "{question:{\"lhs\":\"2^x\",\"rhs\":\"4\"}}") $ render "json"
+
+verifyJSON :: Application ()
+verifyJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ B.pack . BS.encode $ "{question:{'lhs':'2^x','rhs':'4'}}") $ render "json"
 
 withByteString fn str = B.pack . BS.encode $ fn . BS.decode . B.unpack $ str
 
@@ -61,8 +69,11 @@ withByteString fn str = B.pack . BS.encode $ fn . BS.decode . B.unpack $ str
 ------------------------------------------------------------------------------
 -- | The main entry point handler.
 site :: Application ()
-site = route [ ("/",            index)
-             , ("/solve",       solve)
-             , ("/solveJSON",   solveJSON)
+site = route [ ("/",                index)
+             , ("/quiz",            quiz)
+             , ("/solve",           solve)
+             , ("/solveJSON",       solveJSON)
+             , ("/verifyJSON",      verifyJSON)
+             , ("/getQuestionJSON", getQuestionJSON)
              ]
        <|> serveDirectory "resources/static"
