@@ -33,7 +33,7 @@
       });
       
       $('#verify').click(function(x) {
-        $.post('/verifyJSON', {"eqn": $('#lhs').val()+"="+$('#rhs').val()}, solveJSON, 'json');
+        $.post('/verifyJSON', {"eqn": $('#lhs').val()+"="+$('#rhs').val()}, verifyJSON, 'json');
       });
       
       $('#solve').click(function(x) {
@@ -41,26 +41,32 @@
       });
       
       $('#next').click(function(x){
-        getQuestion();
+        init();
       });
       
-      var getQuestion = function() {
-        $.post('/getQuestionJSON', {}, nextQuestion, 'json');
+      var verifyJSON = function(response) {
+        alert('hoohaa');
         return true;
       };
       
+      var init = function() {
+        step = 0;
+        getQuestion();
+      };
+      
       var nextQuestion = function(response) {
-        alert('in here');
-        console.log(response);
         var lhs = response.question && response.question.lhs;
         var rhs = response.question && response.question.rhs;
-        console.log(lhs);
-        console.log(rhs);
         var html = '<input type="text" value="' + lhs + '" name="l" id="lhs"> = <input type="text" value="' + rhs + '" name="r" id="rhs">';
         $('#question').html(html);
         $('#solution_form').html('');
         step = 0;
         addIntermediateSolution(step);
+        return true;
+      };
+      
+      var getQuestion = function() {
+        $.post('/getQuestionJSON',{}, nextQuestion, 'json');
         return true;
       };
       
@@ -84,13 +90,7 @@
         return true;
       };
       
-      var verifyJSON = function(response) {
-        alert('hoohaa');
-        return true;
-      };
-      
-      getQuestion();
-      addIntermediateSolution(step);
+      init();
       
     })
   </script>

@@ -58,7 +58,7 @@ solveJSON = do eqn <- decodedParam "eqn"
               decodedParam p = fromMaybe "" <$> getParam p
 
 getQuestionJSON :: Application ()
-getQuestionJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ B.pack . BS.encode $ "{question:{\"lhs\":\"2^x\",\"rhs\":\"4\"}}") $ render "json"
+getQuestionJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ B.pack . BS.encode $ "{\"question\":{\"lhs\":\"2^x\",\"rhs\":\"4\"}}") $ render "json"
 
 verifyJSON :: Application ()
 verifyJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ B.pack . BS.encode $ "{question:{'lhs':'2^x','rhs':'4'}}") $ render "json"
