@@ -58,7 +58,7 @@ solveEq = searchEq solvedEq equationSize
 
 solveThroughEqs :: [Equation] -> Equation -> SolvedEquation
 solveThroughEqs [] eq = solveEq eq
-solveThroughEqs eqs eq = if onThePath eq (head eqs) 
+solveThroughEqs eqs eq = if onThePath (head eqs) eq 
                          then solveThroughEqs (tail eqs) (head eqs)
                          else SolvedEquation Nothing
                          
