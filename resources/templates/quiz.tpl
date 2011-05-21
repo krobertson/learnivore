@@ -52,6 +52,7 @@
       var init = function() {
         step = 0;
         getQuestion();
+        $('#solution').html('');
       };
       
       var nextQuestion = function(response) {
