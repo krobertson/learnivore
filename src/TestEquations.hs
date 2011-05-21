@@ -26,7 +26,7 @@ import Test.HUnit
 main = testEquations
 testEquations = runTestTT $ equationTests
 -- 
-equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations])--, guessingTests])
+equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations, tSolveThroughEqs])--, guessingTests])
 -- 
 arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
 
@@ -104,3 +104,8 @@ tEquivalentEquations = TestCase $ assertEqual
           "should recognize two equivalent equations: 2^x = 4 => 10 * 2^x = 40"
           "2^x = 4.0" $
           equivalentEquations "2^x=4" "10 * 2^x=40"
+          
+tSolveThroughEqs = TestCase $ assertEqual
+          "should find a solution through a given path"
+          "x=2" $
+          solveThroughEquations ["x=log<2>(4)", "x=2"] "2^x=4"

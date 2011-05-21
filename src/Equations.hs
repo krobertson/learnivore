@@ -4,6 +4,8 @@ searchEq,
 solveEq,
 solveEquation,
 equivalentEquations,
+solveThroughEquations,
+solveThroughEqs,
 eqnSolution,
 printSolvedEquation,
 printEquation,
@@ -29,6 +31,9 @@ solveEquation = processEquation (show . solveEq)
 eqnSolution :: String -> String
 eqnSolution = processEquation getEqnSolution
 
+solveThroughEquations :: [String] -> String -> String
+solveThroughEquations eqs eq = show . solveThroughEqs (List.map parseEquation eqs) $ parseEquation eq
+
 answer :: SolvedEquation -> Equation
 answer (SolvedEquation x) = case x of
                                  (Just xs) -> snd. last $ xs
@@ -50,6 +55,13 @@ searchEq goalTest heuristicFn equation = SolvedEquation (case solutionPath of (J
                                       
 solveEq :: Equation -> SolvedEquation                                                     
 solveEq = searchEq solvedEq equationSize
+
+solveThroughEqs :: [Equation] -> Equation -> SolvedEquation
+solveThroughEqs [] eq = solveEq eq
+solveThroughEqs eqs eq = if onThePath eq (head eqs) 
+                         then solveThroughEqs (tail eqs) (head eqs)
+                         else SolvedEquation Nothing
+                         
 equateEq :: Equation -> Equation -> SolvedEquation
 equateEq equation = searchEq (\x -> x == equation) (\x -> abs (equationSize x - equationSize equation))
 
