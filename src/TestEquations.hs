@@ -107,5 +107,5 @@ tEquivalentEquations = TestCase $ assertEqual
           
 tSolveThroughEqs = TestCase $ assertEqual
           "should find a solution through a given path"
-          "x=2" $
+          "x = 2\n=> Final Equation\nx = 2" $
           solveThroughEquations ["x=log<2>(4)", "x=2"] "2^x=4"

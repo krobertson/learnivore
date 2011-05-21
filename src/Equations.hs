@@ -12,6 +12,7 @@ printEquation,
 Equations.valid,
 equationSize,
 equationTransformations,
+answer
 ) where
 
 import List
