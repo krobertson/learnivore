@@ -77,8 +77,8 @@ tPowBase = TestCase $ assertEqual
           
 tRoot = TestCase $ assertEqual
         "should take the nth root of two integers"
-        "1.189207115002721" $
-        exprSolution "root<2>(4)"
+        "1.414213562373095" $
+        exprSolution "root<2>(2)"
           
 tAbs = TestCase $ assertEqual
           "should take the absolute value of a negative integer"

@@ -26,7 +26,7 @@ import Test.HUnit
 main = testEquations
 testEquations = runTestTT $ equationTests
 -- 
-equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations, tHardEq, tHardEq2, tHardEq3])
+equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations])--, guessingTests])
 -- 
 arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
 
@@ -36,6 +36,7 @@ algebraTests = TestLabel "Algebra Tests" (TestList [tVar1, tVar2, tVar3])
 
 bothSidesTests = TestLabel "Equation Operator Tests" (TestList [tAddBothSides, tSubBothSides, tMultBothSides, tDivBothSides, tLogBothSides, tLogBothSidesEdge, tPowBothSides, tPowBothSidesEdge, tNthRootBothSides, tFindLogarithmBase, tUnrootBothSides, tUnrootBothSides2])
 
+guessingTests = TestLabel "Equations requiring guessing" (TestList [tHardEq1, tHardEq2, tHardEq3])
 
 testSolveEq sol lhs rhs = TestLabel ("Commutative test of " ++ lhs ++ " = " ++ rhs ++ " should equal: " ++ sol)
                      (TestList [TestCase $ assertEqual
@@ -93,7 +94,7 @@ tUnrootBothSides2 = testSolveEq "x = 3.0" "root<x>(8)" "2"
           
 tFindLogarithmBase = testSolveEq "x = 2.0" "log<x>(4)" "2"
 
-tHardEq = testSolveEq "x = 2" "(2^x+2) / x" "3"
+tHardEq1 = testSolveEq "x = 2" "(2^x+2) / x" "3"
 
 tHardEq2 = testSolveEq "x = 2" "2^x + x" "6"
 

@@ -12,7 +12,8 @@ printExpression,
 singleVariable,
 constSolved,
 isOperation,
-isTerm
+isTerm,
+braid
 ) where
   
 import List
@@ -94,7 +95,7 @@ expressionTransformations = [("Adding", applyAdd), ("Subtracting", applySub),
 
 applyRoot :: Expression -> Expression
 applyRoot (Binary NthRoot n expr)
-          | isNumExpr n && isNumExpr expr = Nullary (Constant ((value n) `nthRoot` (value expr)))
+          | isNumExpr n && isNumExpr expr = Nullary (Constant ((value expr) `nthRoot` (value n)))
           | otherwise = Binary NthRoot n expr
 applyRoot x = x
 
@@ -214,10 +215,12 @@ logNums = forNumsDouble Logarithm (logBase)
 
 
 -- helpers
-x `nthRoot` n = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)
+nthRoot x n = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)
 
 eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
 eitherOr fn x y = fn x || fn y
+
+braid (Binary op x y) = (Binary op y x)
 
 isNum :: Term -> Bool
 isNum (Integ _) = True
