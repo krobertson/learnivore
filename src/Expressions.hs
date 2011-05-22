@@ -54,7 +54,7 @@ expressionGraph = fromList . expand
 
 twiddle :: [Expression -> [(String, Expression)]] -> Expression -> [(String, Expression)]
 twiddle transforms expression = if (not . solved $ expression) 
-                                then List.filter (not . (== expression) . snd) $
+                                then nub . List.filter (not . (== expression) . snd) $
                                      List.concat $ List.map ($ expression) transforms
                                 else []
 
