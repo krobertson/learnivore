@@ -20,7 +20,6 @@ SolvedEquation(..),
 ) where
 
 import Data.List
-import Data.Set(fromList)
 import Control.Monad(liftM)
 import Text.JSON
 import Text.Parsec
@@ -57,9 +56,9 @@ data Expression = Nullary Term
           | Unary UnaryOp (Expression) 
           | Binary BinaryOp (Expression) (Expression) 
           | Seq SeqOp [Expression]
-            deriving (Eq, Ord)
+            deriving (Ord)
 
-data Equation = Equation Expression Expression deriving (Ord)
+data Equation = Equation Expression Expression deriving (Eq, Ord)
 data Solution = Solution (Maybe [(String, Expression)]) 
 data SolvedEquation = SolvedEquation (Maybe [(String, Equation)])
 
@@ -85,14 +84,20 @@ instance Eq Term where
   (Integ x) == (Constant y) = (fromInteger x) == y
   (Constant x) == (Integ y) = x == (fromInteger y)
   _ == _ = False
-  
-instance Eq Equation where
-  (Equation llhs@(Binary opl1 ll1 lr1) lrhs@(Binary opl2 ll2 lr2)) == (Equation rlhs@(Binary opr1 rl1 rr1) rrhs@(Binary opr2 rl2 rr2))
-            | otherwise = (opl2 == opr2) && (opl1 == opr1) && 
-              ((fromList $ topLevelExprs opl1 $ llhs) == (fromList $ topLevelExprs opl1 rlhs)) &&
-              ((fromList $ topLevelExprs opl2 $ lrhs) == (fromList $ topLevelExprs opl2 rrhs))
-  (Equation llhs lrhs) == (Equation rlhs rrhs) = (llhs == rlhs) && (lrhs == rrhs)
-  
+
+instance Eq Expression where
+  (Nullary x) == (Nullary y) = x == y
+  (Unary opl l) == (Unary opr r) = opl == opr && l == r
+  lhs@(Binary opl l r) == rhs@(Binary opr ll rr)
+          | isCommutative opl && opl == opr = (process lhs) == (process rhs)
+          | otherwise = opl == opr && l == ll && r == rr
+            where process = sort . (topLevelExprs opl)
+                  isCommutative = (`elem` [Add, Multiply])
+  x == y = False 
+  -- 
+  -- instance Eq Equation where
+  --   (Equation llhs lrhs) == (Equation rlhs rrhs) = ((llhs == rlhs) && (lrhs == rrhs)) || ((llhs == rrhs) && (lrhs == rlhs))
+  --   
 instance Show Term where
   show (Variable str) = str
   show (Constant x) = show x
