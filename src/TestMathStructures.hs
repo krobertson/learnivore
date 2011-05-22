@@ -9,7 +9,12 @@ import Text.JSON
 main = testMathStructures
 testMathStructures = runTestTT $ mathStructureTests
 
-mathStructureTests = TestList ([testRendering, baseCaseTests,arithmeticCases, testTopLevelExprsAdd, testRendering])
+
+equalityTests = TestLabel "Equality Tests" (TestList [termEqualityTests, expressionEqualityTests])
+termEqualityTests = TestLabel "Term Equality Tests" (TestList [tVarEquality, tNumEquality])
+expressionEqualityTests = TestLabel "Expression Equality Tests" (TestList [tNullaryEq, tUnaryEq, tBinaryEqNonComm, tBinaryEqComm])
+
+mathStructureTests = TestList ([testRendering, equalityTests, baseCaseTests,arithmeticCases, testTopLevelExprsAdd, testRendering])
 
 baseCaseTests = TestLabel "Base Cases" (TestList [testInt, testConst, testVar, testVarExpr])
 arithmeticCases = TestLabel "Arithmetic Cases" (TestList [testAdd, testAddV, testAddDiff, testSub, 
@@ -108,3 +113,33 @@ testTopLevelExprsAdd = TestCase $ assertEqual
                        "should be able to break apart a tree into a list of all expressions using that op at the toplevel"
                        ["1","2", "3"] $
                        map show (topLevelExprs Add (parseExpression "1+2+3"))
+
+tVarEquality = TestCase $ assertEqual
+                "should be able to determine the equality of two variables"
+                (parseExpression "x") $
+                parseExpression "x"
+                
+tNumEquality = TestCase $ assertEqual
+                "should be able to determine the equality of two numbers"
+                (parseExpression "2") $
+                parseExpression "2.0"
+                
+tNullaryEq = TestCase $ assertEqual
+                "should be able to determine the equality of nullary equations"
+                (parseEquation "2=2.0") $
+                parseEquation "2=2"
+                
+tUnaryEq = TestCase $ assertEqual
+                "should be able to determine the equality of two unary equations"
+                (parseEquation "|x|=x") $
+                parseEquation "|x|=x"
+                
+tBinaryEqNonComm = TestCase $ assertEqual
+                "should be able to determine the equality of two binary non commutative equations"
+                (parseEquation "2-4=2") $
+                parseEquation "2-4=2"
+                
+tBinaryEqComm = TestCase $ assertEqual
+                "should be able to determine the equality of two binary commutative equations"
+                (parseEquation "2*4=8") $
+                parseEquation "4*2=8"
