@@ -86,7 +86,7 @@ namedEqApply fn eq = List.map (\x -> (fst fn, x)) (snd fn $ eq)
 
 twiddleEq :: [(String, Equation -> [Equation])] -> Equation -> [(String, Equation)]
 twiddleEq transforms equation = if (not . solvedEq $ equation) 
-                                then List.filter (not . (== equation) . snd) $
+                                then nub . List.filter (not . (== equation) . snd) $
                                      List.concat $ List.map (\fn -> namedEqApply fn equation)  transforms
                                 else []
                               
@@ -131,34 +131,34 @@ splitPowerLeft = invertPowersLeft Power Logarithm
 splitPowerRight = invertPowersRight Power Logarithm
 
 splitRootLeft (Equation (Binary NthRoot n x) rhs) = [Equation x (Binary Power rhs n)]
-splitRootLeft equation = [equation]
+splitRootLeft equation = []
 
 splitRootRight (Equation lhs (Binary NthRoot n x)) = [Equation (Binary Power lhs n) x]
-splitRootRight equation = [equation]
+splitRootRight equation = []
 
 splitLogarithmLeft (Equation (Binary Logarithm base x) rhs) = [Equation x (Binary Power base rhs)]
-splitLogarithmLeft equation = [equation]
+splitLogarithmLeft equation = []
 
 splitLogarithmRight (Equation lhs (Binary Logarithm base x)) = [Equation (Binary Power base lhs) x]
-splitLogarithmRight equation = [equation]
+splitLogarithmRight equation = []
 
 nthRootBothSidesR (Equation lhs (Binary Power x n)) = [Equation (Binary NthRoot n lhs) x]
-nthRootBothSidesR x = [x]
+nthRootBothSidesR x = []
 
 nthRootBothSidesL (Equation (Binary Power x n) rhs) = [Equation x (Binary NthRoot n rhs)]
-nthRootBothSidesL x = [x]
+nthRootBothSidesL x = []
 
 invertPowersRight :: BinaryOp -> BinaryOp -> Equation -> [Equation]
 invertPowersRight op inverse equation@(Equation (Binary op1 x y) rhs)
                   | op == op1 = [Equation y (Binary inverse x rhs)]
-                  | otherwise = [equation]
-invertPowersRight _ _ equation = [equation]
+                  | otherwise = []
+invertPowersRight _ _ equation = []
 
 invertPowersLeft :: BinaryOp -> BinaryOp -> Equation -> [Equation]
 invertPowersLeft op inverse equation@(Equation lhs (Binary op1 x y))
                  | op == op1 = [Equation (Binary inverse x lhs) y]
-                 | otherwise = [equation]
-invertPowersLeft _ _ equation = [equation]
+                 | otherwise = []
+invertPowersLeft _ _ equation = []
 
 rotate :: Equation -> [Equation]
 rotate (Equation lhs rhs) = [Equation rhs lhs]
