@@ -69,7 +69,8 @@ solved (Unary Absolute x) = varSolved x
 solved x = (constSolved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
-varSolved (Nullary (Variable x)) = True
+varSolved (Nullary x) = True
+varSolved (Unary Parens _) = False
 varSolved (Unary _ (Nullary (Variable _))) = True
 varSolved (Binary _ x y)
           | isVarExpr x && isVarExpr y && x /= y = False
@@ -78,18 +79,17 @@ varSolved (Binary _ x y)
 varSolved _ = False
 
 constSolved :: Expression -> Bool
-constSolved (Nullary (Constant _)) = True
-constSolved (Nullary (Integ _)) = True
+constSolved (Nullary x) = isNum x
 constSolved _ = False
 
 -- expressionTransformations
-expressionTransformations = [("Adding", applyAdd), ("Subtracting", applySub), 
+expressionTransformations = [("Removing Parentheses", pop), ("Negation", negatify),
+                             ("Adding", applyAdd), ("Subtracting", applySub), 
                              ("Multiplying", applyMult), ("Dividing", applyDiv), 
                              ("Taking the Logarithm", applyLog), ("Exponentiating", applyPow),
                              ("Taking the Nth Root", applyRoot), ("Taking the Absolute Value", absolutify), 
                              ("Adding Zero", addZero), ("Multiplying By Zero", multiplyByZero), 
-                             ("Multiplying By One", multiplyByOne), ("Distribute Law of Multiplication", distribute), 
-                             ("Removing Parentheses", pop), ("Negation", negatify), 
+                             ("Multiplying By One", multiplyByOne), ("Distribute Law of Multiplication", distribute),
                              ("Inverse Law of Logarithms", logInverse), ("Inverse Law of Powers", powInverse), 
                              ("Collapsing Variables", collapseVars)]
 
