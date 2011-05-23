@@ -89,15 +89,17 @@ instance Eq Expression where
   (Nullary x) == (Nullary y) = x == y
   (Unary opl l) == (Unary opr r) = opl == opr && l == r
   lhs@(Binary opl l r) == rhs@(Binary opr ll rr)
-          | isCommutative opl && opl == opr = (process lhs) == (process rhs)
-          | otherwise = opl == opr && l == ll && r == rr
-            where process = sort . (topLevelExprs opl)
+          | isCommutative opl && opl == opr = (process $ lhs) == (process $ rhs) -- these used to be sort . process, but for some reason this breaks everything, even though they are commutative. to a Bag is even worse
+          | otherwise = opl == opr && l == ll && r == rr --(aProcess lhs) == (aProcess rhs) (as long as the head is the same, should be able to freely rotate the tail, but likely breaks for the same reason sorting commutatives doesn't work)
+            where process = (topLevelExprs opl)
+                  aProcess x = let processed = process x in 
+                               if ifList processed then [(head processed)] ++ sort (tail processed) else processed 
+                  processedLhs = process lhs
+                  processedRhs = process rhs
                   isCommutative = (`elem` [Add, Multiply])
+                  ifList = (> 1) . length
   x == y = False 
-  -- 
-  -- instance Eq Equation where
-  --   (Equation llhs lrhs) == (Equation rlhs rrhs) = ((llhs == rlhs) && (lrhs == rrhs)) || ((llhs == rrhs) && (lrhs == rlhs))
-  --   
+
 instance Show Term where
   show (Variable str) = str
   show (Constant x) = show x

@@ -13,14 +13,15 @@ singleVariable,
 constSolved,
 isOperation,
 isTerm,
-braid
+braid,
+swap
 ) where
   
 import List
 import Data.Set
 import Data.Graph.AStar
 import MathStructures  
-      
+
 solve :: Expression -> Solution
 solve expression = Solution (case solutionPath of (Just path) -> Just (("Initial Expression", expression):path)
                                                   Nothing -> Nothing)
@@ -83,7 +84,7 @@ constSolved (Nullary x) = isNum x
 constSolved _ = False
 
 -- expressionTransformations
-expressionTransformations = [("Removing Parentheses", pop), ("Negation", negatify),
+expressionTransformations = [("Swapping Commutative Order", swap), ("Removing Parentheses", pop), ("Negation", negatify),
                              ("Adding", applyAdd), ("Subtracting", applySub), 
                              ("Multiplying", applyMult), ("Dividing", applyDiv), 
                              ("Taking the Logarithm", applyLog), ("Exponentiating", applyPow),
@@ -98,6 +99,10 @@ applyRoot (Binary NthRoot n expr)
           | isNumExpr n && isNumExpr expr = Nullary (Constant ((value expr) `nthRoot` (value n)))
           | otherwise = Binary NthRoot n expr
 applyRoot x = x
+
+swap :: Expression -> Expression
+swap (Binary op l r) = if op `elem` [Add, Multiply] then (Binary op r l) else Binary op l r
+swap x = x
 
 pop :: Expression -> Expression
 pop (Unary Parens x) = x

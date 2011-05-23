@@ -91,7 +91,7 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                 else []
                               
 equationSize :: Equation -> Integer
-equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
+equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
 
 getEqnSolution :: Equation -> String
 getEqnSolution x = case (solveEq x) of
@@ -103,15 +103,14 @@ printSolvedEquation = putStrLn . processEquation (\ans -> do let xs = solveEq $ 
                                                              show xs ++ "\n" ++ solvedString xs)
 -- Equation Transformations
 
-equationTransformations = lhsExpressionTransformations ++ rhsExpressionTransformations ++
-                         [("Swapping Sides", rotate), ("Splitting Multiplication", splitMultiply), 
+equationTransformations = [("Swapping Sides", rotate), ("Splitting Multiplication", splitMultiply), 
                           ("Splitting Division", splitDivide), ("Splitting Addition", splitAdd), 
                           ("Splitting Subtraction", splitSubtract), ("Splitting Exponentiation", splitPowerRight), 
                           ("Splitting Logarithms", splitLogarithmRight), ("Splitting Exponentiation", splitPowerLeft), 
                           ("Spitting Logarithms", splitLogarithmLeft), ("Taking the Root", nthRootBothSidesR), ("Taking the Root", nthRootBothSidesL), 
                           ("Splitting an Nth Root", splitRootLeft), ("Splitting an Nth Root", splitRootRight), 
-                          ("Subtracting from one side", shiftSubtract), ("Dividing from one side", shiftDivide)]
-                          
+                          ("Subtracting from one side", shiftSubtract), ("Dividing from one side", shiftDivide)] ++
+                          lhsExpressionTransformations ++ rhsExpressionTransformations
 
   -- (lifted expression transformations)
 lhsExpressionTransformations = List.map liftExprTransform expressionTransformations
