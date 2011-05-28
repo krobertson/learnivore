@@ -26,7 +26,7 @@ import Test.HUnit
 main = testEquations
 testEquations = runTestTT $ equationTests
 -- 
-equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations, tSolveThroughEqs, tSolveThroughEqs2])--, guessingTests])
+equationTests = TestLabel "Equation Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests, bothSidesTests, tEquivalentEquations, tSolveThroughEqs, tSolveThroughEqs2, tSolveThroughEqs3])--, guessingTests])
 -- 
 arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
 
@@ -110,7 +110,12 @@ tSolveThroughEqs = TestCase $ assertEqual
           "x = 2\n=> Final Equation\nx = 2" $
           solveThroughEquations ["x=log<2>(4)", "x=2"] "2^x=4"
           
-tSolveThroughEqs2 = TestCase $ assertEqual -- doesn't seem to work due to lack of equality of unordered commutative eqs
+tSolveThroughEqs2 = TestCase $ assertEqual 
           "should find a solution through a given path"
           "x = 2\n=> Final Equation\nx = 2" $
           solveThroughEquations ["2+x+1+1=6", "4+x=6", "x=6-4", "x=2"] "x+1+1+1+1=6"
+
+tSolveThroughEqs3 = TestCase $ assertEqual 
+          "should find a solution through a given path"
+          "x = 2\n=> Final Equation\nx = 2" $
+          solveThroughEquations ["2+x+1+1=6", "4+x=6", "x=6-3", "x=2"] "x+1+1+1+1=6"

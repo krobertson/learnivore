@@ -15,5 +15,5 @@ fromOkEq :: Result Equation -> Equation
 fromOkEq (Text.JSON.Ok a) = a
 fromOkEq _ = (Equation (Nullary (Integ 0)) (Nullary (Integ 1)))
 
--- renderEqSolution = (processEquation (show . solveEq))
--- renderEqSolutionJSON json = encode . showJSON . solveEq . parseEquation $ json
+renderEqSolution = (processEquation (show . solveEq))
+renderEqSolutionJSON json = encode . showJSON . solveEq . parseEquation $ json
