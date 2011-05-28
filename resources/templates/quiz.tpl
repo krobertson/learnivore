@@ -33,7 +33,10 @@
       });
       
       $('#verify').click(function(x) {
-        $.post('/verifyJSON', {"eqn": $('#lhs').val()+"="+$('#rhs').val()}, verifyJSON, 'json');
+				var fn = function(selector) {
+					return $(selector).map(function(i,x) {return $(x).val()}).get()
+				}
+        $.post('/verifyAnswerJSON', {"eqn": $('#lhs').val()+"="+$('#rhs').val(), "form": {"lhs": fn('.lhs'), "rhs": fn('.rhs')}}, verifyAnswerJSON, 'json');
       });
       
       $('#solve').click(function(x) {
@@ -44,7 +47,7 @@
         init();
       });
       
-      var verifyJSON = function(response) {
+      var verifyAnswerJSON = function(response) {
         alert('hoohaa');
         return true;
       };
@@ -72,7 +75,7 @@
       };
       
       var addIntermediateSolution = function(i) {
-        var html = '<br/><input type="text" name="lhs'+ i + '" class="lhs"/> = <input type="text" name="rhs'+ i + '" class="rhs"/>';
+        var html = '<br/><input type="text" name="lhs['+ i + ']" class="lhs"/> = <input type="text" name="rhs['+ i + ']" class="rhs"/>';
         $('#solution_form').append(html);
         return true;
       };
