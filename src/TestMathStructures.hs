@@ -14,7 +14,7 @@ equalityTests = TestLabel "Equality Tests" (TestList [termEqualityTests, express
 termEqualityTests = TestLabel "Term Equality Tests" (TestList [tVarEquality, tNumEquality])
 expressionEqualityTests = TestLabel "Expression Equality Tests" (TestList [tNullaryEq, tUnaryEq, tBinaryEqNonComm, tBinaryEqComm])
 
-mathStructureTests = TestList ([testRendering, equalityTests, baseCaseTests,arithmeticCases, testTopLevelExprsAdd, testRendering])
+mathStructureTests = TestList ([equalityTests, baseCaseTests,arithmeticCases, testTopLevelExprsAdd, testRendering])
 
 baseCaseTests = TestLabel "Base Cases" (TestList [testInt, testConst, testVar, testVarExpr])
 arithmeticCases = TestLabel "Arithmetic Cases" (TestList [testAdd, testAddV, testAddDiff, testSub, 
@@ -28,7 +28,7 @@ testJSONShowEq = TestCase $ assertEqual
                "should render an equation as JSON"
                "{\"equation\":{\"lhs\":{\"expression\":\"2 * x\"},\"rhs\":{\"expression\":\"4\"}}}" $
                (encode . showJSON $ (Equation (Binary Multiply (Nullary (Integ 2)) (Nullary (Variable "x"))) (Nullary (Integ 4))))
-               
+             
 testJSONReadEq = TestCase $ assertEqual
                  "should read an equation from JSON"
                  "2 * x = 4" $

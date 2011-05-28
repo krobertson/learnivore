@@ -19,19 +19,25 @@ swap
   
 import List
 import Data.Set
-import Data.Graph.AStar
+import AStar
 import MathStructures  
 
+fromMaybe (Just x) = x
+fromMaybe Nothing = []
+
 solve :: Expression -> Solution
-solve expression = Solution (case solutionPath of (Just path) -> Just (("Initial Expression", expression):path)
+solve expression = Solution (case solutionPath of (Just (path, steps)) -> Just ((expression:(reverse path)), "Initial Expression":(reverse steps))
                                                   Nothing -> Nothing)
                      where solutionPath = if solved expression 
-                                          then Just [("Final Expression", expression)] 
-                                          else aStar (expressionGraph . snd)
-                                                     (\x y -> 1) 
-                                                     (expressionSize . snd)
-                                                     (solved . snd) 
-                                                     ("Initial Expression", expression)
+                                          then Just ([expression], ["Final Expression"]) 
+                                          else foldl (\(Just (exprs, strs)) (str,expr) -> (Just (expr:exprs, str:strs)))
+													(Just ([],[]))
+													(fromMaybe $ aStar (expressionGraph . snd)
+                                                     	  (\x y -> 1) 
+                                                     	  (expressionSize . snd)
+                                                     	  (solved . snd) 
+                                                     	  ("Initial Expression", expression))
+													
   
 
 solveExpression :: String -> String
@@ -41,7 +47,7 @@ exprSolution :: String -> String
 exprSolution = processExpression getExprSolution
 
 getExprSolution x = case (solve x) of
-                         Solution (Just sol) -> show (snd . last $ sol)
+                         Solution (Just sol) -> show (last . fst $  sol)
                          Solution (Nothing) -> "No Solution"
 
 printSolvedExpression :: String -> IO ()
@@ -62,7 +68,7 @@ twiddle transforms expression = if (not . solved $ expression)
 expressionSize :: Expression -> Integer
 expressionSize (Nullary term) = 1
 expressionSize (Unary operator expr) = 1 + expressionSize expr
-expressionSize (Binary operator leftExpr rightExpr) = sum [expressionSize leftExpr, expressionSize rightExpr]
+expressionSize (Binary operator leftExpr rightExpr) = sum [1, expressionSize leftExpr, expressionSize rightExpr]
 
 -- solution checkers
 solved :: Expression -> Bool

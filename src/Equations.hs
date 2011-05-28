@@ -17,11 +17,12 @@ answer
 
 import List
 import Data.Set
-import Data.Graph.AStar
+import AStar
 import MathStructures
 import Expressions
 
--- echo x = trace (show x) x
+fromMaybe (Just x) = x
+fromMaybe Nothing = []
 
 equivalentEquations :: String -> String -> String
 equivalentEquations inp = processEquation (show . answer . equateEq (parseEquation inp))
@@ -37,22 +38,24 @@ solveThroughEquations eqs eq = show . solveThroughEqs (List.map parseEquation eq
 
 answer :: SolvedEquation -> Equation
 answer (SolvedEquation x) = case x of
-                                 (Just xs) -> snd. last $ xs
+                                 (Just xs) -> last . fst $ xs
                                  (Nothing) -> Equation (Nullary (Integ 1)) (Nullary (Integ 0))
 
 onThePath :: Equation -> Equation -> Bool
 onThePath x y = x == answer (equateEq x y)
 
 searchEq :: (Equation -> Bool) -> (Equation -> Integer) -> Equation -> SolvedEquation
-searchEq goalTest heuristicFn equation = SolvedEquation (case solutionPath of (Just path) -> Just (("Initial Equation", equation):path)
+searchEq goalTest heuristicFn equation = SolvedEquation (case solutionPath of (Just (path, steps)) -> Just (equation:(reverse path), "Initial Equation":(reverse steps))
                                                                               Nothing -> Nothing)
                                                               where solutionPath = if goalTest equation 
-                                                                                   then Just [("Final Equation", equation)] 
-                                                                                   else aStar (equationGraph . snd) 
-                                                                                              (\x y -> 1) 
-                                                                                              (heuristicFn . snd)
-                                                                                              (goalTest . snd)
-                                                                                              ("Initial Equation", equation)
+                                                                                   then Just ([equation], ["Final Equation"])
+                                                                                   else foldl (\(Just (eqns, strs)) (str,eqn) -> (Just (eqn:eqns, str:strs)))
+																							  (Just ([],[]))
+																							  (fromMaybe $ aStar (equationGraph . snd) 
+                                                                                              					 (\x y -> 1) 
+                                                                                              					 (heuristicFn . snd)
+                                                                                              					 (goalTest . snd)
+                                                                                              					 ("Initial Equation", equation))
                                       
 solveEq :: Equation -> SolvedEquation                                                     
 solveEq = searchEq solvedEq equationSize
@@ -91,11 +94,11 @@ twiddleEq transforms equation = if (not . solvedEq $ equation)
                                 else []
                               
 equationSize :: Equation -> Integer
-equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs) - 1
+equationSize (Equation lhs rhs) = (expressionSize lhs + expressionSize rhs)
 
 getEqnSolution :: Equation -> String
 getEqnSolution x = case (solveEq x) of
-                        SolvedEquation (Just sol) -> show (snd . last $ sol)
+                        SolvedEquation (Just sol) -> show (last . fst $ sol)
                         SolvedEquation (Nothing) -> "No Solution"
 
 printSolvedEquation :: String -> IO ()
@@ -192,7 +195,7 @@ valid (Equation lhs rhs) = (evaluate lhs) == (evaluate rhs)
 
 validSolution :: SolvedEquation -> Bool
 validSolution (SolvedEquation Nothing) = False
-validSolution (SolvedEquation (Just xs)) = Equations.valid . snd . last $ xs 
+validSolution (SolvedEquation (Just xs)) = Equations.valid . last . fst $ xs 
 
 solvedString :: SolvedEquation -> String
 solvedString solvedEquation

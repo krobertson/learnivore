@@ -59,8 +59,8 @@ data Expression = Nullary Term
             deriving (Ord)
 
 data Equation = Equation Expression Expression deriving (Eq, Ord)
-data Solution = Solution (Maybe [(String, Expression)]) 
-data SolvedEquation = SolvedEquation (Maybe [(String, Equation)])
+data Solution = Solution (Maybe ([Expression], [String])) 
+data SolvedEquation = SolvedEquation (Maybe ([Equation], [String]))
 
 topLevelExprs op expr@(Binary op1 l r)
               | op == op1 = topLevelExprs' op expr
@@ -89,8 +89,8 @@ instance Eq Expression where
   (Nullary x) == (Nullary y) = x == y
   (Unary opl l) == (Unary opr r) = opl == opr && l == r
   lhs@(Binary opl l r) == rhs@(Binary opr ll rr)
-          | isCommutative opl && opl == opr = (process $ lhs) == (process $ rhs) -- these used to be sort . process, but for some reason this breaks everything, even though they are commutative. to a Bag is even worse
-          | otherwise = opl == opr && l == ll && r == rr --(aProcess lhs) == (aProcess rhs) (as long as the head is the same, should be able to freely rotate the tail, but likely breaks for the same reason sorting commutatives doesn't work)
+          | isCommutative opl && opl == opr = (sort . process $ lhs) == (sort . process $ rhs)
+          | otherwise = opl == opr && l == ll && (aProcess lhs) == (aProcess rhs) --(as long as the head is the same, should be able to freely rotate the tail)
             where process = (topLevelExprs opl)
                   aProcess x = let processed = process x in 
                                if ifList processed then [(head processed)] ++ sort (tail processed) else processed 
@@ -129,23 +129,23 @@ instance Show SolvedEquation where
   show = showSolvedEquation
   
 instance JSON SolvedEquation where
-  showJSON (SolvedEquation (Just xs)) = JSArray (map (\x -> JSArray [JSString . toJSString . fst $ x, showJSON (snd x)]) xs)
-  readJSON json = makeSolvedEquation (fromOkVal (readJSON json))
-  
+ showJSON (SolvedEquation (Just (xs, ys))) = JSArray (zipWith (\x y -> JSArray [JSString . toJSString $ x, showJSON y]) ys xs)
+ readJSON json = Text.JSON.Ok (SolvedEquation Nothing) --makeSolvedEquation (fromOkVal (readJSON json))
+
 instance JSON Expression where
-  showJSON x = JSObject (toJSObject [("expression", JSString (toJSString . show $ x))])
-  readJSON json= makeExpression (fromOk (readJSON json))
-  
+ showJSON x = JSObject (toJSObject [("expression", JSString (toJSString . show $ x))])
+ readJSON json= makeExpression (fromOk (readJSON json))
+
 instance JSON Equation where
-  showJSON (Equation lhs rhs) = JSObject (toJSObject [("equation", (JSObject (toJSObject [("lhs", showJSON lhs), ("rhs", showJSON rhs)])))]) 
-  readJSON json = makeEquation (fromOk (readJSON json))
+ showJSON (Equation lhs rhs) = JSObject (toJSObject [("equation", (JSObject (toJSObject [("lhs", showJSON lhs), ("rhs", showJSON rhs)])))]) 
+ readJSON json = makeEquation (fromOk (readJSON json))
   
 
 -- String, print, and json functions
 makeExpression :: JSObject JSValue -> Result Expression
-makeExpression json = let (!) = flip valFromObj in do
-    expression <- (json ! "expression") :: Result JSString
-    return (parseExpression . fromJSString $ expression)
+makeExpression json = let (!) = flip valFromObj in do 
+	expression <- (json ! "expression") :: Result JSString
+	return (parseExpression . fromJSString $ expression)
     
 makeEquation :: JSObject JSValue -> Result Equation
 makeEquation json = let (!) = flip valFromObj in do
@@ -155,7 +155,8 @@ makeEquation json = let (!) = flip valFromObj in do
     return (Equation lhs rhs)
     
 makeSolvedEquation :: [JSValue] -> Result SolvedEquation
-makeSolvedEquation jsValues = return (SolvedEquation (Just (map (\x -> ("", (fromOkEq . readJSON) x)) jsValues)::Maybe [(String, Equation)]))
+makeSolvedEquation jsValues = return (SolvedEquation (Just (sol, map (\x -> "") sol)))
+								where sol = (map (fromOkEq . readJSON) jsValues)::[Equation]
     
 fromOk :: Result (JSObject JSValue) -> (JSObject JSValue)
 fromOk (Text.JSON.Ok json) = json
@@ -189,15 +190,15 @@ showBinary op x y = inBetween (showExpression op x) (show op) (showExpression op
 
 showSeq = undefined
 
-joinFn :: (Show a) => (String -> String) -> [(String, a)] -> String 
-joinFn fn [] = []
-joinFn fn (x:[]) = show $ snd x
-joinFn fn (x:xs) = joinFn fn [x] ++ joinFn' fn xs
+joinFn :: (Show a) => (String -> String) -> ([a], [String]) -> String 
+joinFn fn ([], []) = []
+joinFn fn (x:[], y:[]) = show x
+joinFn fn (x:xs, y:ys) = joinFn fn ([x], [y]) ++ joinFn' fn (xs, ys)
 
-joinFn' :: (Show a) => (String -> String) -> [(String, a)] -> String
-joinFn' fn [] = []
-joinFn' fn (x:[]) = fn (fst x) ++ (show $ snd x)
-joinFn' fn (x:xs) = (joinFn' fn [x]) ++ joinFn' fn xs
+joinFn' :: (Show a) => (String -> String) -> ([a], [String]) -> String
+joinFn' fn ([], []) = []
+joinFn' fn (x:[], y:[]) = fn y ++ (show x)
+joinFn' fn (x:xs, y:ys) = (joinFn' fn ([x],[y])) ++ joinFn' fn (xs, ys)
 
 showSolution :: Solution -> String
 showSolution (Solution (Just xs)) = joinFn (\x -> "\n=> " ++ x ++ "\n") xs
