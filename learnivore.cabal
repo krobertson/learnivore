@@ -1,10 +1,10 @@
 Name:                learnivore
-Version:             0.1
-Synopsis:            Project Synopsis Here
+Version:             0.2
+Synopsis:            Equation Solution Assistant
 Description:         Project Description Here
 License:             AllRightsReserved
-Author:              Author
-Maintainer:          maintainer@example.com
+Author:              Kian Wilcox
+Maintainer:          kianwilcox@gmail.com
 Stability:           Experimental
 Category:            Web
 Build-type:          Simple
@@ -36,7 +36,8 @@ Executable learnivore
     containers,
     haskell98,
     utf8-string,
-    random
+    random,
+    MissingH
 
   extensions: TypeSynonymInstances MultiParamTypeClasses
 

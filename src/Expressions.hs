@@ -96,6 +96,7 @@ expressionTransformations = [("Swapping Commutative Order", swap), ("Removing Pa
                              ("Taking the Logarithm", applyLog), ("Exponentiating", applyPow),
                              ("Taking the Nth Root", applyRoot), ("Taking the Absolute Value", absolutify), 
                              ("Adding Zero", addZero), ("Multiplying By Zero", multiplyByZero), 
+                             ("Dividing a Zero", divideZero),
                              ("Multiplying By One", multiplyByOne), ("Distribute Law of Multiplication", distribute),
                              ("Inverse Law of Logarithms", logInverse), ("Inverse Law of Powers", powInverse), 
                              ("Collapsing Variables", collapseVars)]
@@ -120,6 +121,12 @@ addZero (Binary Add x y)
         | isZeroExpr y = x
         | otherwise = (Binary Add x y)
 addZero x = x
+
+divideZero :: Expression -> Expression
+divideZero (Binary Divide x y)
+           | isZeroExpr x = (Nullary (Integ 0))
+           | otherwise = (Binary Divide x y)
+divideZero x = x
 
 multiplyByZero :: Expression -> Expression
 multiplyByZero (Binary Multiply x y) 

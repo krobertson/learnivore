@@ -75,7 +75,7 @@ join str = concat . intersperse str
 solvedEq :: Equation -> Bool
 solvedEq (Equation lhs rhs)
         | (singleVariable lhs) && (constSolved rhs) = True
-        | constSolved lhs && constSolved rhs = True
+        | constSolved lhs && constSolved rhs && evaluate lhs == evaluate rhs = True
         | otherwise = False
         
 equationGraph :: Equation -> Set (String, Equation)

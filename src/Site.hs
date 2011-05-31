@@ -59,16 +59,17 @@ solveJSON = do eqn <- decodedParam "eqn"
 
 verifyAnswerJSON :: Application ()
 verifyAnswerJSON = do {solution <- decodedParam "solution"
-											;question <- decodedParam "question"
-											;heistLocal (bindString "json" $ T.decodeUtf8 $ withByteString (renderAnswerJSON . BS.decode . B.unpack $ question) solution) $ render "json"}
-            	      where
-            		     decodedParam p = fromMaybe "" <$> getParam p
+                      ;question <- decodedParam "question"
+                      ;heistLocal (bindString "json" $ T.decodeUtf8 $ toByteString . renderAnswerJSON (toString solution) $ toString question) $ render "json"}
+                    where
+                     decodedParam p = fromMaybe "" <$> getParam p
 
 getQuestionJSON :: Application ()
-getQuestionJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ B.pack . BS.encode $ "{\"question\":{\"lhs\":\"2^x\",\"rhs\":\"4\"}}") $ render "json"
+getQuestionJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ toByteString $ "{\"question\":{\"lhs\":\"2^x\",\"rhs\":\"4\"}}") $ render "json"
 
 withByteString fn str = B.pack . BS.encode $ fn . BS.decode . B.unpack $ str
-
+toString = BS.decode . B.unpack
+toByteString = B.pack . BS.encode
 
 ------------------------------------------------------------------------------
 -- | The main entry point handler.
@@ -78,6 +79,6 @@ site = route [ ("/",                index)
              , ("/solve",           solve)
              , ("/solveJSON",       solveJSON)
              , ("/getQuestionJSON", getQuestionJSON)
-			 , ("/verifyAnswerJSON",verifyAnswerJSON)
+       , ("/verifyAnswerJSON",verifyAnswerJSON)
              ]
        <|> serveDirectory "resources/static"

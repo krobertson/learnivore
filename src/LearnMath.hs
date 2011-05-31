@@ -1,5 +1,6 @@
 module LearnMath
 (renderEqSolution, renderEqSolutionJSON, renderAnswerJSON, solveEquation) where
+import Data.String.Utils
 import Text.JSON
 import MathStructures
 import Expressions
@@ -20,5 +21,7 @@ renderEqSolution = (processEquation (show . solveEq))
 renderEqSolutionJSON json = encode . showJSON . solveEq . parseEquation $ json
 
 renderAnswerJSON :: String -> String -> String
-renderAnswerJSON solution question = solution ++ "   " ++ question--encode . showJSON . solveThroughEqs (parseSolution solution) $ (parseEquation question)
-																			--where parseSolution solution = [solution]
+renderAnswerJSON solution question = encode . showJSON $ solveThroughEqs (process solution) (parseEquation question)
+                                      where process = map parseEquation . split "," . replaceAll [("&lt;", "<"), ("&gt;", ">")]
+                                            replaceAll = compose . map (\(x, y) -> (\xs -> replace x y xs))
+                                            compose = foldr1 (.)

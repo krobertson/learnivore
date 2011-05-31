@@ -33,10 +33,32 @@
       });
       
       $('#verify').click(function(x) {
-				var fn = function(selector) {
-					return $(selector).map(function(i,x) {return $(x).val()}).get()
-				}
-        $.post('/verifyAnswerJSON', {"eqn": $('#lhs').val()+"="+$('#rhs').val(), "form": {"lhs": fn('.lhs'), "rhs": fn('.rhs')}}, verifyAnswerJSON, 'json');
+        var fn = function(selector) {
+          return $(selector).map(function(i,x) {return $(x).val()}).get();
+        };
+        var fn2 = function(list1, list2) {
+          var ret_string="";
+          if(list1.length > list2.length) {
+            for(i in list2) {
+              if (i > 0) {ret_string+=","+list1[i]+"="+list2[i]}
+              else {ret_string+= list1[i]+"="+list2[i]}
+            }
+          }
+          else {
+            for(i in list1) {
+              if (i > 0) {ret_string+=","+list1[i]+"="+list2[i]}
+              else {ret_string+= list1[i]+"="+list2[i]}
+            }
+          }
+          return ret_string;
+        }
+        
+        
+        $.post('/verifyAnswerJSON', 
+              {"question": $('#lhs').val()+"="+$('#rhs').val(), 
+               "solution": fn2(fn('.lhs'), fn('.rhs'))}, 
+               verifyAnswerJSON, 
+               'json');
       });
       
       $('#solve').click(function(x) {
@@ -48,7 +70,7 @@
       });
       
       var verifyAnswerJSON = function(response) {
-        alert('hoohaa');
+        renderSolution(response);
         return true;
       };
       
@@ -81,18 +103,23 @@
       };
       
       var solveJSON = function(response){
-        var solution = "";
-        var start = response[0][1];
-        var path = response.slice(1, response.length+1);
-        for (eq in path) {
-          var eqn = path[eq][1].equation;
-          solution+= "<br/>=> " + path[eq][0] + "<br/>" + eqn.lhs.expression + " = " + eqn.rhs.expression;
-        }
-        solution= start.equation.lhs.expression + " = " + start.equation.rhs.expression + solution;
-        $('#solution').html("Solution:<br/>");
-        $('#solution').append(solution);
+        renderSolution(response);
         return true;
       };
+      
+      var renderSolution = function(solution) {
+        var solution_string = "";
+        var start = solution[0][1];
+        var path = solution.slice(1, solution.length+1);
+        for (eq in path) {
+          var eqn = path[eq][1].equation;
+          solution_string+= "<br/>=> " + path[eq][0] + "<br/>" + eqn.lhs.expression + " = " + eqn.rhs.expression;
+        }
+        solution_string = start.equation.lhs.expression + " = " + start.equation.rhs.expression + solution_string;
+        $('#solution').html("Solution:<br/>");
+        $('#solution').append(solution_string);
+        return true;
+      }
       
       init();
       
