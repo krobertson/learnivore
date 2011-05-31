@@ -61,20 +61,29 @@ write an algebraic expression generator as a markov chain, reusing the transform
 
 set up QuickCheck for testing (using HUnit for now)
 
-add all the trigonometric functions, e, pi, factorial, i, and other operations on complex numbers 
+to finish algebra:
+add rationals, factoring polynomials and integers, trigonometric functions, e, pi, factorial
+add i and other operations on complex numbers, systems of equations
 
-combinatorics, derivatives, integrals, logic, higher maths
+to continue on the engineering math track:
+derivatives, integrals, linear algebra 
 
-systems of equations, linear algebra
+to continue on the university level math track:
+logics, combinatorics, abstract algebra, category theory
+
+TODO BUGS: 
+should display correct solution if incorrect solution is given to quiz question
+should not generate equations that it cannot solve (use perfect square determinants to generate integer solvable polynomials, etc)
 
 Snap
   - expose as a json api
     - Equations
       - solve (*DONE*)
-      - generate
-      - verify solution (expression -> solution)
+      - generate (*PARTIAL*)
+      - verify solution (equation -> solution) (*PARTIAL*)
+    - Quiz Stream
+    ------------ maybe later
     - Expressions
       - simplify
       - generate
       - verify solution
-    - Quiz Stream
