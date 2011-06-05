@@ -58,7 +58,7 @@ data Expression = Nullary Term
           | Seq SeqOp [Expression]
             deriving (Ord)
 
-data Equation = Equation Expression Expression deriving (Eq, Ord)
+data Equation = Equation {lhs::Expression, rhs::Expression} deriving (Eq, Ord)
 data Solution = Solution (Maybe ([Expression], [String])) 
 data SolvedEquation = SolvedEquation (Maybe ([Equation], [String]))
 
@@ -287,10 +287,8 @@ exprparser = buildExpressionParser exprTable term <?> "expression"
 
 exprTable = [ [Prefix (m_reservedOp "-" >> return (Unary Negate))]
             , [Infix (m_reservedOp "^" >> return (Binary Power)) AssocLeft]
-            , [Infix (m_reservedOp "*" >> return (Binary Multiply)) AssocLeft]
-            , [Infix (m_reservedOp "/" >> return (Binary Divide)) AssocLeft]
-            , [Infix (m_reservedOp "+" >> return (Binary Add)) AssocLeft]
-            , [Infix (m_reservedOp "-" >> return (Binary Subtract)) AssocLeft]
+            , [Infix (m_reservedOp "*" >> return (Binary Multiply)) AssocLeft, Infix (m_reservedOp "/" >> return (Binary Divide)) AssocLeft]
+            , [Infix (m_reservedOp "+" >> return (Binary Add)) AssocLeft, Infix (m_reservedOp "-" >> return (Binary Subtract)) AssocLeft]
             ]
              
 term = parenParser
@@ -319,6 +317,14 @@ alternateRootParser = do string "root"
                          n <- within '<' '>'
                          expr <- within '(' ')'
                          return (Binary NthRoot n expr)
+                         
+squareRootParser = do string "√"
+                      expr <- within '(' ')'
+                      return (Binary NthRoot (Nullary (Integ 2)) expr)
+                      
+alternateSquareRootParser = do string "sqrt"
+                               expr <- within '(' ')'
+                               return (Binary NthRoot (Nullary (Integ 2)) expr)
          
 absParser = do x <- within '|' '|'
                return (Unary Absolute x)

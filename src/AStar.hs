@@ -9,6 +9,13 @@ import qualified Data.PSQueue as PSQ
 import Data.PSQueue (PSQ, Binding(..), minView)
 import Data.List (foldl', foldl, deleteBy)
 import Control.Monad (foldM)
+-- import System.IO.Unsafe
+-- 
+-- puts str x = unsafePerformIO (do {putStrLn (around str x); return x})
+-- around str x = str ++ "\n" ++ show x ++ "\n" ++ str 
+-- 
+-- reveal str = puts ("------------------ " ++ str ++ " --------------------")
+-- revealIf fn str x = if fn x then reveal str x else x
 
 removeDups :: (Eq b) => [(a, b)] -> [(a, b)] -> [(a, b)]
 removeDups = foldl (flip (deleteBy (\x y -> (snd x) == (snd y))))
@@ -38,29 +45,29 @@ runAStar :: (Show a, Ord a, Show c, Ord c, Num c) =>
          -> AStar (String, a) c     -- final state
 
 runAStar graph dist heur goal start = aStar' (aStarInit start)
-  where aStar' s
-          = case minView (waiting s) of
-              Nothing            -> s
+  where aStar' struct
+          = case minView (waiting struct) of
+              Nothing            -> struct
               Just ((str, x) :-> _, w') ->
                 if goal (str,x)
-                  then s { end = Just (str, x) }
+                  then struct { end = Just (str, x) }
                   else aStar' $ foldl' (expand (str, x))
-                                       (s { waiting = w',
-                                            visited = Set.insert ("", x) (visited s)})
-                                       (removeDups (Set.toList $ graph (str, x)) (Set.toList $ visited s))
-        expand x s y
-          = let v = (score s) ! ("", (snd x)) + dist x y
-            in case PSQ.lookup y (waiting s) of
-                 Nothing -> link x y v
-                              (s { memoHeur
-                                     = Map.insert y (heur y) (memoHeur s) })
-                 Just _  -> if v < ((score s) ! ("", snd y))
-                              then link x y v s
-                              else s
-        link x y v s
-           = s { cameFrom = Map.insert y x (cameFrom s),
-                 score    = Map.insert ("", snd y) v (score s),
-                 waiting  = PSQ.insert y (v + memoHeur s ! y) (waiting s) }
+                                       (struct { waiting = w',
+                                            visited = Set.insert ("", x) (visited struct)})
+                                       (removeDups (Set.toList $ graph (str, x)) (Set.toList $ visited struct))
+        expand current struct next
+          = let val = ((score struct) ! ("", (snd current))) + dist current next
+            in case PSQ.lookup next (waiting struct) of
+                 Nothing -> link current next val
+                              (struct { memoHeur
+                                     = Map.insert ("", snd next) (heur next) (memoHeur struct) })
+                 Just _  -> if val < (score struct) ! ("", snd next)
+                              then (link current next val struct)
+                              else struct
+        link current next val struct
+           = struct { cameFrom = Map.insert next current (cameFrom struct),
+                 score    = Map.insert ("", (snd next)) val (score struct),
+                 waiting  = PSQ.insert next (val + ((memoHeur struct) ! ("", snd next))) (waiting struct) }
 
 -- | This function computes an optimal (minimal distance) path through a graph in a best-first fashion,
 -- starting from a given starting point.
@@ -79,7 +86,7 @@ aStar graph dist heur goal start
     = let s = runAStar graph dist heur goal start
       in case end s of
             Nothing -> Nothing
-            Just e  -> Just (reverse . takeWhile (not . (== start)) . iterate ((cameFrom s) !) $ e)
+            Just e  -> Just (reverse . takeWhile (not . (\x -> snd x == snd start)) . iterate ((cameFrom s) !) $ e)
 
 runAStarM :: (Monad m, Ord a, Ord c, Num c) =>
           ((String, a) -> m (Set (String, a)))   -- adjacencies in graph

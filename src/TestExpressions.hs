@@ -28,7 +28,7 @@ testExpressions = runTestTT $ expressionTests
 -- 
 expressionTests = TestLabel "Expression Simplification Tests" (TestList [arithmeticTests, preAlgebraTests, algebraTests])
 -- 
-arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tAbs, tNeg])
+arithmeticTests = TestLabel "Arithmetic Tests" (TestList [tAdd, tSub, tMult, tDiv, tDivCompound, tDivRational, tAbs, tNeg])
 
 preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow, tRoot, tLogBase, tPowBase])
 
@@ -54,6 +54,16 @@ tDiv = TestCase $ assertEqual
           "should divide two integers"
           "2.0" $
           exprSolution  "4 / 2"
+          
+tDivCompound = TestCase $ assertEqual
+          "should have a left associative division operator"
+          "0.5" $
+          exprSolution  "1 / 1 / 2"
+          
+tDivRational = TestCase $ assertEqual
+          "should flip the fraction"
+          "2.0" $
+          exprSolution  "1 / (1 / 2)"
           
 tPow = TestCase $ assertEqual
           "should exponentiate two integers"
