@@ -14,7 +14,6 @@ constSolved,
 isOperation,
 isTerm,
 braid,
-swap,
 simplify
 ) where
   
@@ -99,7 +98,7 @@ constSolved (Unary Negate (Nullary x)) = isNum x
 constSolved _ = False
 
 -- expressionTransformations
-expressionTransformations = [("Swapping Commutative Order", swap), ("Removing Parentheses", pop), ("Negation", negatify),
+expressionTransformations = [("Swapping Commutative Order", braid), ("Removing Parentheses", pop), ("Negation", negatify),
                              ("Adding", applyAdd), ("Subtracting", applySub), 
                              ("Multiplying", applyMult), ("Dividing", applyDiv), 
                              ("Taking the Logarithm", applyLog), 
@@ -111,15 +110,14 @@ expressionTransformations = [("Swapping Commutative Order", swap), ("Removing Pa
                              ("Inverse Law of Logarithms", logInverse), ("Inverse Law of Powers", powInverse), 
                              ("Collapsing Variables", collapseVars)]
 
+braid (Binary op x y) = if op `elem` [Add, Multiply] then (bopConstructor op) y x else (bopConstructor op) x y
+braid x = x
+
 applyRoot :: Expression -> Expression
 applyRoot (Binary NthRoot n expr)
           | isNumExpr n && isNumExpr expr = val $ (value expr) `nthRoot` (value n)
           | otherwise = expr `nroot` n
 applyRoot x = x
-
-swap :: Expression -> Expression
-swap (Binary op l r) = if op `elem` [Add, Multiply] then (Binary op r l) else Binary op l r
-swap x = x
 
 pop :: Expression -> Expression
 pop (Unary Parens x) = x
@@ -194,31 +192,23 @@ applyLog  = applyBinOp Logarithm logTerms
 applyPow  = applyBinOp Power powTerms
 
 -- apply helpers
-forNums :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
-forNums op fn (Integ a) (Integ b) = val (fn (fromInteger a) (fromInteger b))
-forNums _ fn (Constant x) (Integ y) = val (fn x (fromInteger y))
-forNums _ fn (Integ x) (Constant y) = val (fn (fromInteger x) y)
-forNums op _ x y = (bopConstructor op) (Nullary x) (Nullary y)
+forNums :: BinaryOp -> (Double -> Double -> Double) -> Expression -> Expression -> Expression
+forNums op fn x@(Nullary _) y@(Nullary _) = val (fn (value x) (value y))
+forNums op _ x y = (bopConstructor op) x y
 
-forNumsDouble :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
-forNumsDouble op fn (Integ a) (Integ b) = val (fn (fromInteger a) (fromInteger b))
-forNumsDouble _ fn (Constant x) (Integ y) = val (fn x (fromInteger y))
-forNumsDouble _ fn (Integ x) (Constant y) = val (fn (fromInteger x) y)
-forNumsDouble op _ x y = bopConstructor op (Nullary x) (Nullary y)
-
-forVars :: BinaryOp -> (Term -> Expression) -> Term -> Term -> Expression
-forVars op fn (Variable x) (Variable y) 
-        | x == y = fn (Variable x)
-        | otherwise = (bopConstructor op) (var x) (var y)
-forVars op _ x y = (bopConstructor op) (Nullary x) (Nullary y)
+forVars :: BinaryOp -> (Expression -> Expression) -> Expression -> Expression -> Expression
+forVars op fn v1@(Nullary (Variable x)) v2@(Nullary (Variable y))
+        | x == y = fn v1
+        | otherwise = (bopConstructor op) v1 v2
+forVars op _ x y = (bopConstructor op) x y
 
 forTerms numFn varFn x y
-         | isNum x && isNum y = numFn x y
+         | isNumExpr x && isNumExpr y = numFn x y
          | otherwise = varFn x y
 
-applyBinOp op fn (Binary op2 (Nullary x) (Nullary y)) 
-      | op == op2 = fn x y
-      | otherwise = Binary op2 (Nullary x) (Nullary y) 
+applyBinOp op fn (Binary op2 t1@(Nullary _) t2@(Nullary _)) 
+      | op == op2 = fn t1 t2
+      | otherwise = (bopConstructor op2) t1 t2 
 applyBinOp _ _ x = x
 
 addTerms = forTerms addNums addVars
@@ -228,28 +218,25 @@ divTerms = forTerms divNums divVars
 powTerms = forTerms powNums powVars
 logTerms = forTerms logNums logVars
 
-addVars = forVars Add (\x -> val 2 |*| (Nullary x))
+addVars = forVars Add (\x -> val 2 |*| x)
 subVars = forVars Subtract (\x -> val 0)
-multVars = forVars Multiply (\x -> val 2 |*| (Nullary x))
+multVars = forVars Multiply (\x -> x |^| val 2)
 divVars = forVars Divide (\x -> val 1)
-powVars = forVars Power (\x -> (Nullary x) |^| (Nullary x))
-logVars = forVars Logarithm (\x -> lg (Nullary x) (Nullary x))
+powVars = forVars Power (\x -> (x |^| x))
+logVars = forVars Logarithm (\x -> val 1)
 
 addNums = forNums Add (+)
 subNums = forNums Subtract (-)
 multNums = forNums Multiply (*)
-divNums = forNumsDouble Divide (/)
+divNums = forNums Divide (/)
 powNums = forNums Power (**)
-logNums = forNumsDouble Logarithm (logBase)
-
+logNums = forNums Logarithm (logBase)
 
 -- helpers
 nthRoot x n = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)
 
 eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
 eitherOr fn x y = fn x || fn y
-
-braid (Binary op x y) = (Binary op y x)
 
 isNum :: Term -> Bool
 isNum (Integ _) = True

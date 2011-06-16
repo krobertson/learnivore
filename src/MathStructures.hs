@@ -87,7 +87,7 @@ instance Eq Expression where
                   ifList = (> 1) . length
   x == y = False 
 
--- construction helpers
+-- constructor helpers
 infixl 5 |=|
 infixl 8 |^|
 infixl 6 |+|
@@ -102,15 +102,6 @@ infixl 7 |/|
 (|^|) = Binary Power
 (|=|) = Equation
 
-bopConstructor Add = (|+|)
-bopConstructor Subtract = (|-|)
-bopConstructor Multiply = (|*|)
-bopConstructor Divide = (|/|)
-bopConstructor Power = (|^|)
-bopConstructor NthRoot = nroot
-bopConstructor Logarithm = lg
-
-
 val :: Double -> Expression
 val x
 		| fromInteger (round x) == x = Nullary (Integ (round x))
@@ -123,6 +114,16 @@ sqr = Binary NthRoot (val 2)
 nroot = flip (Binary NthRoot)
 lg = (Binary Logarithm)
 var = Nullary . Variable
+
+bopConstructor Add = (|+|)
+bopConstructor Subtract = (|-|)
+bopConstructor Multiply = (|*|)
+bopConstructor Divide = (|/|)
+bopConstructor Power = (|^|)
+bopConstructor NthRoot = flip nroot
+bopConstructor Logarithm = lg
+
+-- expression manipulation
 
 topLevelExprs op expr@(Binary op1 l r)
               | op == op1 = topLevelExprs' op expr
@@ -150,6 +151,3 @@ exmap fn (Binary operator leftExpression rightExpression) = [fn `namedApply` Bin
                                                                  (exmap fn rightExpression))
                                                             ++ (map (\x -> (fst x, Binary operator (snd x) rightExpression)) 
                                                                  (exmap fn leftExpression))
-
-
- 
