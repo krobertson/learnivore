@@ -18,6 +18,7 @@ answer
 import List
 import Data.Set
 import AStar
+import ReadAndWriteMathStructures
 import MathStructures
 import Expressions
 

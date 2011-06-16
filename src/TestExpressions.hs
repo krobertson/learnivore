@@ -1,11 +1,11 @@
 module TestExpressions
-(testExpressions, expressionTests) where
+(testExpressions, expressionTest, expressionTests) where
   
 -- import System.Random
 -- import IO.Unsafe
 -- import TypeLevel.NaturalNumber
 -- import Data.Eq.Approximate
-import MathStructures
+import ReadAndWriteMathStructures
 import Expressions
 -- import Generators
 import Test.HUnit
@@ -34,6 +34,11 @@ preAlgebraTests = TestLabel "Pre-Algebra Tests" (TestList [tLog, tPow, tRoot, tL
 
 algebraTests = TestLabel "Algebra Tests" (TestList [tVar1, tVar2, tVar3])
 
+expressionTest expr sol = TestCase $ assertEqual
+         									("it should be true that: " ++ expr ++ " = " ++ sol)
+         									sol $
+         									exprSolution expr
+
 
 tAdd = TestCase $ assertEqual
           "should add two integers"
@@ -52,7 +57,7 @@ tMult = TestCase $ assertEqual
           
 tDiv = TestCase $ assertEqual
           "should divide two integers"
-          "2.0" $
+          "2" $
           exprSolution  "4 / 2"
           
 tDivCompound = TestCase $ assertEqual
@@ -62,7 +67,7 @@ tDivCompound = TestCase $ assertEqual
           
 tDivRational = TestCase $ assertEqual
           "should flip the fraction"
-          "2.0" $
+          "2" $
           exprSolution  "1 / (1 / 2)"
           
 tPow = TestCase $ assertEqual
@@ -72,7 +77,7 @@ tPow = TestCase $ assertEqual
           
 tLog = TestCase $ assertEqual
           "should log two integers"
-          "2.0" $
+          "2" $
           exprSolution  "log<2>(4)"
         
 tLogBase = TestCase $ assertEqual

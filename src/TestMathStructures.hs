@@ -1,6 +1,7 @@
 module TestMathStructures
 (testMathStructures, mathStructureTests) where
 
+import ReadAndWriteMathStructures
 import MathStructures
 import LearnMath
 import Test.HUnit
@@ -41,7 +42,7 @@ testInt = TestCase $ assertEqual
           
 testConst = TestCase $ assertEqual
           "should process a single floating point number as an expression"
-          "1.0" $
+          "1" $
           processExpression show "1.0"
           
 testVar = TestCase $ assertEqual
@@ -66,13 +67,13 @@ testAddV = TestCase $ assertEqual
           
 testAddDiff = TestCase $ assertEqual
           "should process addition of an integer and a double as an expression"
-          "1 + 1.0" $
-          processExpression show "1 + 1.0" 
+          "1 + 1.5" $
+          processExpression show "1 + 1.5" 
           
 testAddDiff2 = TestCase $ assertEqual
           "should process addition of a double and an integer as an expression"
-          "1.0 + 1" $
-          processExpression show "1.0 + 1"          
+          "1.5 + 1" $
+          processExpression show "1.5 + 1"          
           
 testSub = TestCase $ assertEqual
           "should process an integer subtraction as an expression"
@@ -136,8 +137,8 @@ tUnaryEq = TestCase $ assertEqual
                 
 tBinaryEqNonComm = TestCase $ assertEqual
                 "should be able to determine the equality of two binary non commutative equations"
-                (parseEquation "2-4=2") $
-                parseEquation "2-4=2"
+                (parseEquation "2-4=-2") $
+                parseEquation "2-4=-2"
                 
 tBinaryEqComm = TestCase $ assertEqual
                 "should be able to determine the equality of two binary commutative equations"

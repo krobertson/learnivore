@@ -27,6 +27,7 @@ Executable learnivore
     snap == 0.4.2,
     snap-core == 0.4.2,
     snap-server == 0.4.2,
+    data-object-yaml,
     text >= 0.11 && < 0.12,
     json,
     time >= 1.1 && < 1.3,

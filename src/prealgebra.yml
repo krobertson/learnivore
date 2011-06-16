@@ -1,0 +1,49 @@
+prealgebra:
+  "whole numbers": [] 
+  "integers": []  
+  "fractions": [] 
+  "decimals": []
+  "variables":
+    - ex: "x + x = 2 * x"
+    - ex: "3*x + x = 4 * x"
+  "powers and square roots":
+    - ex: "4^2 = 16"
+    - ex: "3^3 = 27"
+    - ex: "sqrt(16) = 4"
+    - ex: "<3>root(27) = 3"
+    - ex: "√(4) = 2"
+  "powers, exponents, and roots":
+    - ex:  "5^1 = 5"
+    - ex:  "3^0 = 1"
+    - ex:  "1^4 = 1"
+    - ex:  "0^5 = 0"
+    - ex:  "2^(-3) = 0.125"
+    - ex:  "4^(-2) = 6.25e-2"
+    - eq:  "3^5 * 3^(-3) = 3^2"
+      solution: "9 = 9"
+    - ex:  "3^(2x) * 3^(-3x) = 3^(2*x)"
+    - eq:  "5^5 / 5^3 = 5^2"
+      solution: "25 = 25"
+    - ex:  "2*x^2 + x^2 = 3*x^2"
+    - ex:  "2x^2 + x^2 = 3*x^2"
+  
+  polynomials:
+    - ex: "(x+3)*(x-1) = x^2+2*x-3"
+  
+  "positive and negative numbers":
+    - ex: "1 + -5 = -4"
+    - ex: "-3 * -5 = 15"
+    - ex: "3 - (-3) = 6"
+      
+  "absolute value":
+    - ex: "1 + |-5| = 6"
+    - ex: "|1-17| = 16"
+  
+  "order of operations":
+    - ex: "12 – 4 + 6 – 1 = 13"
+    - ex: "4 * 12 / 6 * 2 = 16"
+    - ex: "18 + 36 / 3^2 = 22"
+    - ex: "5^2 * 2^4 = 400"
+    - ex: "289 - (3 * 5)^2 = 64"
+    - ex: "8 + (2 * 5) * 3^4 / 9 = 98"
+    - ex: "15 * 12^2 + 150 = 2310"

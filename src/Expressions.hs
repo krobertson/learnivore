@@ -14,13 +14,15 @@ constSolved,
 isOperation,
 isTerm,
 braid,
-swap
+swap,
+simplify
 ) where
   
 import List
 import Data.Set
 import AStar
-import MathStructures  
+import ReadAndWriteMathStructures
+import MathStructures 
 
 fromMaybe (Just x) = x
 fromMaybe Nothing = []
@@ -50,6 +52,10 @@ getExprSolution x = case (solve x) of
                          Solution (Just sol) -> show (last . fst $  sol)
                          Solution (Nothing) -> "No Solution"
 
+simplify x = case (solve x) of
+             	Solution (Just sol) -> (last . fst $  sol)
+             	Solution (Nothing) -> x
+
 printSolvedExpression :: String -> IO ()
 printSolvedExpression = putStrLn . solveExpression
 
@@ -72,7 +78,9 @@ expressionSize (Binary operator leftExpr rightExpr) = sum [1, expressionSize lef
 
 -- solution checkers
 solved :: Expression -> Bool
-solved (Unary Absolute x) = varSolved x
+solved (Unary Absolute x)
+ 				| isVarExpr x = varSolved x
+				| otherwise = False
 solved x = (constSolved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
@@ -87,13 +95,15 @@ varSolved _ = False
 
 constSolved :: Expression -> Bool
 constSolved (Nullary x) = isNum x
+constSolved (Unary Negate (Nullary x)) = isNum x
 constSolved _ = False
 
 -- expressionTransformations
 expressionTransformations = [("Swapping Commutative Order", swap), ("Removing Parentheses", pop), ("Negation", negatify),
                              ("Adding", applyAdd), ("Subtracting", applySub), 
                              ("Multiplying", applyMult), ("Dividing", applyDiv), 
-                             ("Taking the Logarithm", applyLog), ("Exponentiating", applyPow),
+                             ("Taking the Logarithm", applyLog), 
+														 ("Exponentiating with Negative Powers", negativePowers), ("Exponentiating", applyPow),
                              ("Taking the Nth Root", applyRoot), ("Taking the Absolute Value", absolutify), 
                              ("Adding Zero", addZero), ("Multiplying By Zero", multiplyByZero), 
                              ("Dividing a Zero", divideZero),
@@ -103,8 +113,8 @@ expressionTransformations = [("Swapping Commutative Order", swap), ("Removing Pa
 
 applyRoot :: Expression -> Expression
 applyRoot (Binary NthRoot n expr)
-          | isNumExpr n && isNumExpr expr = Nullary (Constant ((value expr) `nthRoot` (value n)))
-          | otherwise = Binary NthRoot n expr
+          | isNumExpr n && isNumExpr expr = val $ (value expr) `nthRoot` (value n)
+          | otherwise = expr `nroot` n
 applyRoot x = x
 
 swap :: Expression -> Expression
@@ -119,26 +129,26 @@ addZero :: Expression -> Expression
 addZero (Binary Add x y) 
         | isZeroExpr x = y
         | isZeroExpr y = x
-        | otherwise = (Binary Add x y)
+        | otherwise = x |+| y
 addZero x = x
 
 divideZero :: Expression -> Expression
 divideZero (Binary Divide x y)
-           | isZeroExpr x = (Nullary (Integ 0))
-           | otherwise = (Binary Divide x y)
+           | isZeroExpr x = val 0
+           | otherwise = x |/| y
 divideZero x = x
 
 multiplyByZero :: Expression -> Expression
 multiplyByZero (Binary Multiply x y) 
-               | isZeroExpr x || isZeroExpr y = Nullary (Integ 0)
-               | otherwise = (Binary Multiply x y)
+               | isZeroExpr x || isZeroExpr y = val 0
+               | otherwise = x |*| y
 multiplyByZero x = x
 
 multiplyByOne :: Expression -> Expression
 multiplyByOne (Binary Multiply x y) 
                | eitherOr isOneExpr x y && isOneExpr x = y
                | eitherOr isOneExpr x y && isOneExpr y = x
-               | otherwise = (Binary Multiply x y)
+               | otherwise = x |*| y
 multiplyByOne x = x
 
 absolutify :: Expression -> Expression
@@ -147,13 +157,16 @@ absolutify (Unary Absolute x) = x
 absolutify expression = expression
 
 negatify :: Expression -> Expression
-negatify (Unary Negate (Nullary (Constant x))) = (Nullary (Constant (negate x)))
-negatify (Unary Negate (Nullary (Integ x))) = (Nullary (Integ (negate x)))
+negatify (Unary Negate (Unary Negate x)) = x
 negatify x = x
 
+negativePowers :: Expression -> Expression
+negativePowers (Binary Power base (Unary Negate exponent)) = val 1 |/| base |^| exponent
+negativePowers x = x
+
 distribute :: Expression -> Expression
-distribute (Binary Multiply (Binary Add x y) z) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
-distribute (Binary Multiply z (Binary Add x y)) = Binary Add (Binary Multiply x z) (Binary Multiply y z)
+distribute (Binary Multiply (Binary Add x y) z) = x |*| z |+| y |*| z
+distribute (Binary Multiply z (Binary Add x y)) = x |*| z |+| y |*| z
 distribute x = x
 
 logInverse :: Expression -> Expression
@@ -166,12 +179,10 @@ powInverse x = x
 
 collapseVars :: Expression -> Expression
 collapseVars (Binary Add x y)
-             | variable x == variable y && variable x /= "" = Binary Multiply (Nullary (Integ 2)) x
+             | variable x == variable y && variable x /= "" = val 2 |*| x
              | (isVariableProduct x || variable x /= "") && 
                (isVariableProduct y || variable y /= "") && 
-               (listOfVariables x List.\\ listOfVariables y == []) = Binary Multiply
-                                                               (applyAdd (Binary Add (getConstant x) (getConstant y)))
-                                                               (Nullary (Variable (head $ listOfVariables x)))
+               (listOfVariables x List.\\ listOfVariables y == []) = (applyAdd ((getConstant x) |+| (getConstant y))) |*| (var (head $ listOfVariables x))
 collapseVars x = x
 
 -- functions for applying operators over terms
@@ -184,22 +195,22 @@ applyPow  = applyBinOp Power powTerms
 
 -- apply helpers
 forNums :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
-forNums op fn (Integ a) (Integ b) = Nullary (Integ (round (fn (fromInteger a) (fromInteger b))))
-forNums _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
-forNums _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
-forNums op _ x y = Binary op (Nullary x) (Nullary y)
+forNums op fn (Integ a) (Integ b) = val (fn (fromInteger a) (fromInteger b))
+forNums _ fn (Constant x) (Integ y) = val (fn x (fromInteger y))
+forNums _ fn (Integ x) (Constant y) = val (fn (fromInteger x) y)
+forNums op _ x y = (bopConstructor op) (Nullary x) (Nullary y)
 
 forNumsDouble :: BinaryOp -> (Double -> Double -> Double) -> Term -> Term -> Expression
-forNumsDouble op fn (Integ a) (Integ b) = Nullary (Constant (fn (fromInteger a) (fromInteger b)))
-forNumsDouble _ fn (Constant x) (Integ y) = Nullary (Constant (fn x (fromInteger y)))
-forNumsDouble _ fn (Integ x) (Constant y) = Nullary (Constant (fn (fromInteger x) y))
-forNumsDouble op _ x y = Binary op (Nullary x) (Nullary y)
+forNumsDouble op fn (Integ a) (Integ b) = val (fn (fromInteger a) (fromInteger b))
+forNumsDouble _ fn (Constant x) (Integ y) = val (fn x (fromInteger y))
+forNumsDouble _ fn (Integ x) (Constant y) = val (fn (fromInteger x) y)
+forNumsDouble op _ x y = bopConstructor op (Nullary x) (Nullary y)
 
 forVars :: BinaryOp -> (Term -> Expression) -> Term -> Term -> Expression
 forVars op fn (Variable x) (Variable y) 
         | x == y = fn (Variable x)
-        | otherwise = Binary op (Nullary (Variable x)) (Nullary (Variable y)) 
-forVars op _ x y = Binary op (Nullary x) (Nullary y)
+        | otherwise = (bopConstructor op) (var x) (var y)
+forVars op _ x y = (bopConstructor op) (Nullary x) (Nullary y)
 
 forTerms numFn varFn x y
          | isNum x && isNum y = numFn x y
@@ -217,12 +228,12 @@ divTerms = forTerms divNums divVars
 powTerms = forTerms powNums powVars
 logTerms = forTerms logNums logVars
 
-addVars = forVars Add (\x -> Binary Multiply (Nullary (Integ 2)) (Nullary x))
-subVars = forVars Subtract (\x -> Nullary (Integ 0))
-multVars = forVars Multiply (\x -> Binary Multiply (Nullary (Integ 2)) (Nullary x))
-divVars = forVars Divide (\x -> Nullary (Integ 1))
-powVars = forVars Power (\x -> Binary Power (Nullary x) (Nullary x))
-logVars = forVars Logarithm (\x -> Binary Logarithm (Nullary x) (Nullary x))
+addVars = forVars Add (\x -> val 2 |*| (Nullary x))
+subVars = forVars Subtract (\x -> val 0)
+multVars = forVars Multiply (\x -> val 2 |*| (Nullary x))
+divVars = forVars Divide (\x -> val 1)
+powVars = forVars Power (\x -> (Nullary x) |^| (Nullary x))
+logVars = forVars Logarithm (\x -> lg (Nullary x) (Nullary x))
 
 addNums = forNums Add (+)
 subNums = forNums Subtract (-)
@@ -292,9 +303,9 @@ getConstant :: Expression -> Expression
 getConstant (Binary Multiply (Nullary x) (Nullary y))
  | isVariable x && isNum y = (Nullary y)
  | isVariable y && isNum x = (Nullary x)
- | otherwise = (Nullary (Integ 0))
-getConstant (Nullary (Variable x)) = (Nullary (Integ 1))
-getConstant _ = (Nullary (Integ 0))
+ | otherwise = val 0
+getConstant (Nullary (Variable x)) = val 1
+getConstant _ = val 0
 
 singleVariable :: Expression -> Bool
 singleVariable (Nullary (Variable _)) = True

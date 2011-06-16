@@ -1,14 +1,15 @@
 module TestEquations
-(testEquations, equationTests) where
+(testEquations, equationTests, equationTest, splitEquation) where
   
 -- import System.Random
 -- import IO.Unsafe
 -- import TypeLevel.NaturalNumber
 -- import Data.Eq.Approximate
-import MathStructures
+import ReadAndWriteMathStructures
 import Equations
 -- import Generators
 import Test.HUnit
+import Data.String.Utils
 
 -- uncomment the below code after figuring out how to get QuickCheck to work
 -- generateExpression = do let sizes = [basic, simple, moderate, complex, hard]
@@ -46,27 +47,32 @@ testSolveEq sol lhs rhs = TestLabel ("Commutative test of " ++ lhs ++ " = " ++ r
                                 (rhs ++" = " ++ lhs ++ " should equal: " ++ sol)
                                 sol $ eqnSolution (rhs ++ "=" ++ lhs)])
 
+equationTest test solution = testSolveEq (join " = " (splitEquation solution)) lhs rhs
+															where [lhs, rhs] = splitEquation test
+															
+splitEquation eq = map strip $ split "=" eq 
+
 tAdd = testSolveEq "x = 2" "x" "1 + 1" 
           
 tSub = testSolveEq "x = 0" "x" "1 - 1"
           
 tMult = testSolveEq "x = 6" "x" "2 * 3"  
           
-tDiv = testSolveEq "x = 2.0" "x" "4 / 2"
+tDiv = testSolveEq "x = 2" "x" "4 / 2"
           
 tPow = testSolveEq "x = 8" "x" "2 ^ 3"
           
-tLog = testSolveEq "x = 2.0" "x" "log<2>(4)"
+tLog = testSolveEq "x = 2" "x" "log<2>(4)"
           
 tAbs = testSolveEq "x = 6" "x" "|-6|"
           
 tNeg = testSolveEq "x = -5" "x" "-(3 + 2)"
           
-tVar1 = testSolveEq "x = 1.0" "x + x" "2"
+tVar1 = testSolveEq "x = 1" "x + x" "2"
           
-tVar2 = testSolveEq "x = 1.0" "x + x + x" "3"
+tVar2 = testSolveEq "x = 1" "x + x + x" "3"
           
-tVar3 = testSolveEq "x = 1.0" "2 * x + 2 * x" "4"
+tVar3 = testSolveEq "x = 1" "2 * x + 2 * x" "4"
 
 tAddBothSides = testSolveEq "x = 1" "x - 5" "-4"
           
@@ -74,15 +80,15 @@ tSubBothSides = testSolveEq "x = 0" "x + 1" "1"
           
 tNegBothSides = testSolveEq "x = -1" "-x" "1"
           
-tMultBothSides = testSolveEq "x = 1.0" "x / 5" "1 / 5"
+tMultBothSides = testSolveEq "x = 1" "x / 5" "1 / 5"
           
-tDivBothSides = testSolveEq "x = 1.0" "x * 5" "5"
+tDivBothSides = testSolveEq "x = 1" "x * 5" "5"
           
-tNthRootBothSides = testSolveEq "x = 2.0" "x^3" "8"
+tNthRootBothSides = testSolveEq "x = 2" "x^3" "8"
           
-tLogBothSides = testSolveEq "x = 2.0" "2^x" "4"
+tLogBothSides = testSolveEq "x = 2" "2^x" "4"
 
-tLogBothSidesEdge = testSolveEq "x = 1.0" "2^x" "2"          
+tLogBothSidesEdge = testSolveEq "x = 1" "2^x" "2"          
         
 tPowBothSidesEdge = testSolveEq "x = 2" "log<2>(x)" "1"
 
@@ -90,9 +96,9 @@ tPowBothSides = testSolveEq "x = 16" "log<2>(x)" "4"
           
 tUnrootBothSides = testSolveEq "x = 8" "root<3>(x)" "2"
           
-tUnrootBothSides2 = testSolveEq "x = 3.0" "root<x>(8)" "2"
+tUnrootBothSides2 = testSolveEq "x = 3" "root<x>(8)" "2"
           
-tFindLogarithmBase = testSolveEq "x = 2.0" "log<x>(4)" "2"
+tFindLogarithmBase = testSolveEq "x = 2" "log<x>(4)" "2"
 
 tHardEq1 = testSolveEq "x = 2" "(2^x+2) / x" "3"
 
@@ -102,7 +108,7 @@ tHardEq3 = testSolveEq "x = 2" "2^x + x" "4+2"
 
 tEquivalentEquations = TestCase $ assertEqual
           "should recognize two equivalent equations: 2^x = 4 => 10 * 2^x = 40"
-          "2^x = 4.0" $
+          "2^x = 4" $
           equivalentEquations "2^x=4" "10 * 2^x=40"
           
 tSolveThroughEqs = TestCase $ assertEqual

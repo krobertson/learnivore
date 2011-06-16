@@ -72,6 +72,7 @@ to continue on the university level math track:
 logics, combinatorics, abstract algebra, category theory
 
 TODO BUGS: 
+3 errors and 13 failures in current spec suite
 should display correct solution if incorrect solution is given to quiz question
 should not generate equations that it cannot solve (use perfect square determinants to generate integer solvable polynomials, etc)
 

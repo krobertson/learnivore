@@ -3,19 +3,32 @@ import TestMathStructures
 import TestExpressions
 import TestEquations
 import Test.HUnit
+import Data.List
 import Data.String.Utils
-
+import Data.Object
+import Data.Object.Yaml
+import Data.String.Utils
+import System.IO.Unsafe
 
 main = testAll
 testAll = runTestTT $  allTests
-allTests = TestLabel "Learnivore Tests" (TestList [mathStructureTests, expressionTests, equationTests])
+allTests = TestLabel "Learnivore Tests" (TestList [mathStructureTests, expressionTests, equationTests, mathTests])
+mathTests = importTests ["prealgebra.yml"]
+                       
 
--- testSolveEq sol lhs rhs = TestLabel ("Commutative test of " ++ lhs ++ " = " ++ rhs ++ " should equal: " ++ sol)
---                      (TestList [TestCase $ assertEqual
---                                 (lhs ++" = " ++ rhs ++ " should equal: " ++ sol)
---                                 sol $ eqnSolution (lhs ++ "=" ++ rhs),
---                                 TestCase $ assertEqual
---                                 (rhs ++" = " ++ lhs ++ " should equal: " ++ sol)
---                                 sol $ eqnSolution (rhs ++ "=" ++ lhs)])
---                                 
--- testSet setName 
+importTests files = TestLabel "Mathematics Tests" (TestList (map decodeTestSet files))
+decodeTestSet file = unsafePerformIO (do {maybeObject <- decodeFile file
+										 											;case maybeObject of
+										 	 											Nothing -> return (TestCase $ assertEqual ("tests for " ++ file ++ " failed to load due to a YAML parse error.") True $ False)
+										 	 											Just object -> return (decodeTests object)})
+					
+decodeTests (Mapping [(setName, Mapping testLists)]) = TestLabel setName (TestList $ map decodeTestList testLists)						
+
+decodeTestList (listName, Sequence tests) =  TestLabel listName (TestList $ (map decodeTest tests))
+
+decodeTest :: Object [Char] [Char] -> Test
+decodeTest (Mapping [("eq", Scalar test), ("solution", Scalar solution)]) = equationTest test solution 
+decodeTest (Mapping [("ex", Scalar eq)]) = expressionTest expr solution
+																							where [expr, solution] = splitEquation eq
+decodeTest x = TestCase $ assertEqual ("Incorrect test: " ++ show x) True False
+															

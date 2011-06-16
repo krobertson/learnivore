@@ -2,6 +2,7 @@ module LearnMath
 (renderEqSolution, renderEqSolutionJSON, renderAnswerJSON, solveEquation) where
 import Data.String.Utils
 import Text.JSON
+import ReadAndWriteMathStructures
 import MathStructures
 import Expressions
 import Equations
