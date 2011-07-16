@@ -105,7 +105,7 @@ expressionTransformations = [("Swapping Commutative Order", braid), ("Removing P
 														 ("Exponentiating with Negative Powers", negativePowers), ("Exponentiating", applyPow),
                              ("Taking the Nth Root", applyRoot), ("Taking the Absolute Value", absolutify), 
                              ("Adding Zero", addZero), ("Multiplying By Zero", multiplyByZero), 
-                             ("Dividing a Zero", divideZero),
+                             ("Dividing a Zero", divideZero), ("Multiplying two Negatives", multiplyNegatives),
                              ("Multiplying By One", multiplyByOne), ("Distribute Law of Multiplication", distribute),
                              ("Inverse Law of Logarithms", logInverse), ("Inverse Law of Powers", powInverse), 
                              ("Collapsing Variables", collapseVars)]
@@ -149,9 +149,18 @@ multiplyByOne (Binary Multiply x y)
                | otherwise = x |*| y
 multiplyByOne x = x
 
+multiplyNegatives :: Expression -> Expression
+multiplyNegatives (Binary Multiply (Unary Negate x) (Unary Negate y)) = (Binary Multiply x y)
+multiplyNegatives x = x 
+
 absolutify :: Expression -> Expression
 absolutify (Unary Absolute (Unary Negate x)) = x
-absolutify (Unary Absolute x) = x
+absolutify expr@(Unary Absolute subex@(Nullary x))
+           | (isNum x) && (value subex) < 0 = val $ abs (value subex)
+           | otherwise = subex
+absolutify expr@(Unary Absolute x)
+           | isTerm x = x
+           | otherwise = expr
 absolutify expression = expression
 
 negatify :: Expression -> Expression
@@ -314,6 +323,8 @@ variable _ = ""
 value :: Expression -> Double
 value (Nullary (Constant n)) = n
 value (Nullary (Integ n)) = fromInteger n
+value (Unary Negate (Nullary (Constant n))) = -1 * n
+value (Unary Negate (Nullary (Integ n))) = -1 * (fromInteger n)
 value _ = 0.0 / 0.0
 
 

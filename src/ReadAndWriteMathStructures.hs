@@ -213,7 +213,7 @@ logParser = do string "log"
                return (lg base expr)
 
 nthRootParser = do n <- within '<' '>'
-                   string "√"
+                   string "√" <|> string "root"
                    expr <- within '(' ')'
                    return (expr `nroot` n)
 
@@ -239,7 +239,9 @@ parenParser = do x <- within '(' ')'
 termParser = try floatParser <|> try varExprParser <|> intParser <|> varParser
 
 floatParser = liftM val m_float
+
 intParser = liftM (val . fromInteger) m_natural
+
 varExprParser = do x <- (try floatParser) <|> intParser
                    v <- varParser
                    return (x |*| v)
