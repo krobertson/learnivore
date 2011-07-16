@@ -203,7 +203,9 @@ applyPow  = applyBinOp Power powTerms
 -- apply helpers
 forNums :: BinaryOp -> (Double -> Double -> Double) -> Expression -> Expression -> Expression
 forNums op fn x@(Nullary _) y@(Nullary _) = val (fn (value x) (value y))
-forNums op _ x y = (bopConstructor op) x y
+forNums op fn x y
+        | isTerm x && isTerm y = val (fn (value x) (value y))
+        | otherwise = (bopConstructor op) x y
 
 forVars :: BinaryOp -> (Expression -> Expression) -> Expression -> Expression -> Expression
 forVars op fn v1@(Nullary (Variable x)) v2@(Nullary (Variable y))
@@ -215,9 +217,10 @@ forTerms numFn varFn x y
          | isNumExpr x && isNumExpr y = numFn x y
          | otherwise = varFn x y
 
-applyBinOp op fn (Binary op2 t1@(Nullary _) t2@(Nullary _)) 
-      | op == op2 = fn t1 t2
-      | otherwise = (bopConstructor op2) t1 t2 
+applyBinOp op fn (Binary op2 t1 t2) 
+      | op == op2 && isOK t1 && isOK t2 = fn t1 t2
+      | isOK t1 && isOK t2 = (bopConstructor op2) t1 t2 
+        where isOK x = isTerm x || isNumExpr x 
 applyBinOp _ _ x = x
 
 addTerms = forTerms addNums addVars
@@ -272,13 +275,15 @@ isVariable _ = False
 
 isTerm :: Expression -> Bool
 isTerm (Nullary _) = True
+isTerm (Unary Negate (Nullary _)) = True
 isTerm _ = False
 
 exprIs :: (Term -> Bool) -> Expression -> Bool
 exprIs fn (Nullary x) = fn x
 exprIs _ _ = False
 
-isNumExpr = exprIs isNum
+isNumExpr (Unary Negate x) = (exprIs isNum x)
+isNumExpr x = (exprIs isNum x)  
 
 isZeroExpr :: Expression -> Bool
 isZeroExpr = exprIs isZero
