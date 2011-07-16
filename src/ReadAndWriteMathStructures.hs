@@ -185,13 +185,18 @@ eqnparser = do { x <- exprparser
               ; return (x |=| y)}
 
 exprparser :: Parser Expression
-exprparser = buildExpressionParser exprTable term <?> "expression"
+exprparser = buildExpressionParser exprTable termRecognizer <?> "expression"
 
 exprTable = [ [Prefix (m_reservedOp "-" >> return neg)]
             , [Infix (m_reservedOp "^" >> return (|^|)) AssocLeft]
             , [Infix (m_reservedOp "*" >> return (|*|)) AssocLeft, Infix (m_reservedOp "/" >> return (|/|)) AssocLeft]
             , [Infix (m_reservedOp "+" >> return (|+|)) AssocLeft, Infix (m_reservedOp "-" >> return (|-|)) AssocLeft]
             ]
+
+termRecognizer = do (try mySpace <|> nil)
+                    x <- term
+                    (try mySpace <|> nil)
+                    return x
 
 term = parenParser
        <|> logParser
@@ -201,6 +206,10 @@ term = parenParser
        <|> nthRootParser
        <|> absParser
        <|> termParser
+
+mySpace = string " "
+
+nil = string ""
 
 within open close = do char open
                        x <- exprparser
