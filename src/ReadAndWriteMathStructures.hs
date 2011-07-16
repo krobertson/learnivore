@@ -193,23 +193,22 @@ exprTable = [ [Prefix (m_reservedOp "-" >> return neg)]
             , [Infix (m_reservedOp "+" >> return (|+|)) AssocLeft, Infix (m_reservedOp "-" >> return (|-|)) AssocLeft]
             ]
 
-termRecognizer = do (try mySpace <|> nil)
+termRecognizer = do many mySpace
                     x <- term
-                    (try mySpace <|> nil)
+                    many mySpace
                     return x
 
 term = parenParser
        <|> logParser
-			 <|> squareRootParser
-			 <|> alternateSquareRootParser
+       <|> squareRootParser
+       <|> alternateSquareRootParser
        <|> alternateRootParser
        <|> nthRootParser
        <|> absParser
        <|> termParser
 
-mySpace = string " "
 
-nil = string ""
+mySpace = string " "
 
 within open close = do char open
                        x <- exprparser
