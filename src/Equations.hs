@@ -114,13 +114,12 @@ equationTransformations = [("Swapping Sides", rotate), ("Splitting Multiplicatio
                           ("Spitting Logarithms", splitLogarithmLeft), ("Taking the Root", nthRootBothSidesR), ("Taking the Root", nthRootBothSidesL), 
                           ("Splitting an Nth Root", splitRootLeft), ("Splitting an Nth Root", splitRootRight), 
                           ("Subtracting from one side", shiftSubtract), ("Dividing from one side", shiftDivide)] ++
-                          lhsExpressionTransformations ++ rhsExpressionTransformations
+                          liftedExpressionTransformations
 
   -- (lifted expression transformations)
-lhsExpressionTransformations = List.map liftExprTransform expressionTransformations
-rhsExpressionTransformations = List.map liftExprTransform expressionTransformations
+liftedExpressionTransformations = List.map liftExprTransform expressionTransformations
 
-liftExprTransform :: (String, Expression -> Expression) -> (String, Equation -> [Equation])
+liftExprTransform :: (String, Expression -> [Expression]) -> (String, Equation -> [Equation])
 liftExprTransform fn = (fst fn, (\eq@(Equation lhs rhs) -> let (ls, rs) = ((exmap fn lhs), (exmap fn rhs))
                                                            in (List.map (\x -> Equation lhs (snd x)) rs) ++
                                                               (List.map (\x -> Equation (snd x) rhs) ls)))

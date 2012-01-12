@@ -73,19 +73,28 @@ instance Eq Term where
   _ == _ = False
 
 instance Eq Expression where
-  (Nullary x) == (Nullary y) = x == y
-  (Unary opl l) == (Unary opr r) = opl == opr && l == r
-  lhs@(Binary opl l r) == rhs@(Binary opr ll rr)
-          | isCommutative opl && opl == opr = (sort . process $ lhs) == (sort . process $ rhs)
-          | otherwise = opl == opr && l == ll && (aProcess lhs) == (aProcess rhs) --(as long as the head is the same, should be able to freely rotate the tail)
-            where process = (topLevelExprs opl)
-                  aProcess x = let processed = process x in 
-                               if ifList processed then [(head processed)] ++ sort (tail processed) else processed 
-                  processedLhs = process lhs
-                  processedRhs = process rhs
-                  isCommutative = (`elem` [Add, Multiply])
-                  ifList = (> 1) . length
-  x == y = False 
+  (Nullary term1) == (Nullary term2) = term1 == term2
+  (Unary op expr) == (Unary op2 expr2) = op == op2 && expr == expr2
+  (Binary op expr1 expr2) == (Binary op2 expr3 expr4) = op == op2 && expr1 == expr3 && expr2 == expr4
+  _ == _ =  False  
+  
+class SemanticEq a where
+  (*==) :: a -> a -> Bool
+  
+instance SemanticEq Expression where
+  (Nullary x) *== (Nullary y) = x == y
+  (Unary opl l) *== (Unary opr r) = opl == opr && l *== r
+  lhs@(Binary opl l r) *== rhs@(Binary opr ll rr)
+        | isCommutative opl && opl == opr = (sort . process $ lhs) == (sort . process $ rhs)
+        | otherwise = opl == opr && l == ll && (aProcess lhs) == (aProcess rhs) --(as long as the head is the same, should be able to freely rotate the tail)
+          where process = (topLevelExprs opl)
+                aProcess x = let processed = process x in 
+                             if ifList processed then [(head processed)] ++ sort (tail processed) else processed 
+                processedLhs = process lhs
+                processedRhs = process rhs
+                isCommutative = (`elem` [Add, Multiply])
+                ifList = (> 1) . length
+  _ *== _ = False
 
 -- constructor helpers
 infixl 5 |=|
@@ -143,11 +152,6 @@ treeify op = foldl1 (\x y -> (Binary op x y))
 namedApply :: (String, (a -> b)) -> a -> (String, b)
 namedApply fn x = (fst fn, snd fn $ x)
 
-exmap :: (String, (Expression -> Expression)) -> Expression -> [(String, Expression)]
-exmap fn (Nullary term) = [fn `namedApply` (Nullary term)]
-exmap fn (Unary operator expr) = [fn `namedApply` (Unary operator expr)] ++ map (\x -> (fst x, Unary operator (snd x))) (exmap fn expr)
-exmap fn (Binary operator leftExpression rightExpression) = [fn `namedApply` Binary operator leftExpression rightExpression]
-                                                            ++ (map (\x -> (fst x, Binary operator leftExpression (snd x))) 
-                                                                 (exmap fn rightExpression))
-                                                            ++ (map (\x -> (fst x, Binary operator (snd x) rightExpression)) 
-                                                                 (exmap fn leftExpression))
+exmap :: (String, (Expression -> [Expression])) -> Expression -> [(String, Expression)]
+exmap fn expression = map (\x -> (fst result, x)) $ snd result
+                        where result = (fn `namedApply` expression)

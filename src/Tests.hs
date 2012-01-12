@@ -2,6 +2,7 @@ module Tests(testAll, allTests) where
 import TestMathStructures
 import TestExpressions
 import TestEquations
+import TestAlgebraicStructures
 import Test.HUnit
 import Data.List
 import Data.String.Utils
@@ -12,7 +13,7 @@ import System.IO.Unsafe
 
 main = testAll
 testAll = runTestTT $  allTests
-allTests = TestLabel "Learnivore Tests" (TestList [mathStructureTests, expressionTests, equationTests, mathTests])
+allTests = TestLabel "Learnivore Tests" (TestList [mathStructureTests, expressionTests, equationTests, mathTests, algebraicStructureTests])
 mathTests = importTests ["prealgebra.yml"]
                        
 

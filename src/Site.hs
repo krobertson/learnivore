@@ -67,7 +67,7 @@ verifyAnswerJSON = do {solution <- decodedParam "solution"
 getQuestionJSON :: Application ()
 getQuestionJSON = do heistLocal (bindString "json" $ T.decodeUtf8 $ toByteString $ "{\"question\":{\"lhs\":\"2^x\",\"rhs\":\"4\"}}") $ render "json"
 
-withByteString fn str = B.pack . BS.encode $ fn . BS.decode . B.unpack $ str
+withByteString fn str = toByteString $ fn . toString $ str
 toString = BS.decode . B.unpack
 toByteString = B.pack . BS.encode
 

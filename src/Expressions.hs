@@ -13,7 +13,6 @@ singleVariable,
 constSolved,
 isOperation,
 isTerm,
-braid,
 simplify
 ) where
   
@@ -22,6 +21,7 @@ import Data.Set
 import AStar
 import ReadAndWriteMathStructures
 import MathStructures 
+import AlgebraicStructures
 
 fromMaybe (Just x) = x
 fromMaybe Nothing = []
@@ -98,20 +98,46 @@ constSolved (Unary Negate (Nullary x)) = isNum x
 constSolved _ = False
 
 -- expressionTransformations
-expressionTransformations = [("Swapping Commutative Order", braid), ("Removing Parentheses", pop), ("Negation", negatify),
-                             ("Adding", applyAdd), ("Subtracting", applySub), 
-                             ("Multiplying", applyMult), ("Dividing", applyDiv), 
-                             ("Taking the Logarithm", applyLog), 
-														 ("Exponentiating with Negative Powers", negativePowers), ("Exponentiating", applyPow),
-                             ("Taking the Nth Root", applyRoot), ("Taking the Absolute Value", absolutify), 
-                             ("Adding Zero", addZero), ("Multiplying By Zero", multiplyByZero), 
-                             ("Dividing a Zero", divideZero), ("Multiplying two Negatives", multiplyNegatives),
-                             ("Multiplying By One", multiplyByOne), ("Distribute Law of Multiplication", distribute),
-                             ("Inverse Law of Logarithms", logInverse), ("Inverse Law of Powers", powInverse), 
-                             ("Collapsing Variables", collapseVars)]
+expressionTransformations = [
+                             ("Removing Parentheses", unparen), ("Negation", negation),
+                             ("Adding", addition), ("Subtracting", subtraction), 
+                             ("Multiplying", multiplication), ("Dividing", division), 
+                             ("Taking the Logarithm", takethelog), 
+														 ("Exponentiating with Negative Powers", negexp), ("Exponentiating", exponentiation),
+                             ("Taking the Nth Root", root), ("Taking the Absolute Value", absval), 
+                             ("Adding Zero", addzero), ("Multiplying By Zero", multzero), 
+                             ("Dividing a Zero", divzero), ("Multiplying two Negatives", multnegs),
+                             ("Multiplying By One", multone), ("Distribute Law of Multiplication", dist),
+                             ("Inverse Law of Logarithms", loginverse), ("Inverse Law of Powers", powinverse), 
+                             ("Collapsing Variables", collvar),
+                             ("Swapping Commutative Order", commute), ("Swapping Associative Evaluation Order", associate)
+                            ]
 
-braid (Binary op x y) = if op `elem` [Add, Multiply] then (bopConstructor op) y x else (bopConstructor op) x y
-braid x = x
+transform :: (Expression -> Expression) -> (Expression -> [Expression])
+transform fn = propagate ((:[]) . fn)
+
+root = transform applyRoot
+unparen = transform pop
+addzero = transform addZero
+divzero = transform divideZero
+multzero = transform multiplyByZero
+negation = transform negatify
+addition = transform applyAdd
+subtraction = transform applySub
+multiplication = transform applyMult
+exponentiation = transform applyPow
+division = transform applyDiv
+takethelog = transform applyLog
+negexp = transform negativePowers
+absval = transform absolutify
+multnegs = transform multiplyNegatives
+multone = transform multiplyByOne
+dist = transform distribute
+loginverse = transform logInverse
+powinverse = transform powInverse
+collvar = transform collapseVars
+
+
 
 applyRoot :: Expression -> Expression
 applyRoot (Binary NthRoot n expr)
