@@ -70,21 +70,21 @@ to finish algebra:
 add rationals, factoring polynomials and integers, trigonometric functions, factorial
 add i and other operations on complex numbers, systems of equations
 
-DRY the expression and equation transformations up
 
 write an algebraic expression generator, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
 set up QuickCheck for testing (using HUnit for now)
 
 to continue on the engineering math track:
-derivatives, integrals, linear algebra 
+linear algebra, derivatives, integrals 
 
 to continue on the university level math track:
 logics, combinatorics, abstract algebra, category theory
 
 TODO BUGS: 
-3 errors and 11 failures in current spec suite
+1 error and 4 failures in current spec suite
 should display correct solution if incorrect solution is given to quiz question
+
 should not generate equations that it cannot solve (use perfect square determinants to generate integer solvable polynomials, etc)
 
 Snap
