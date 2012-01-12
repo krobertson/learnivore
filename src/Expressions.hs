@@ -354,6 +354,8 @@ variable _ = ""
 value :: Expression -> Double
 value (Nullary (Constant n)) = n
 value (Nullary (Integ n)) = fromInteger n
+value (Nullary E) = exp 1
+value (Nullary Pi) = pi
 value (Unary Negate (Nullary (Constant n))) = -1 * n
 value (Unary Negate (Nullary (Integ n))) = -1 * (fromInteger n)
 value _ = 0.0 / 0.0
@@ -363,8 +365,8 @@ value _ = 0.0 / 0.0
 
 evaluate :: Expression -> Double
 evaluate (Unary Parens expression)          = evaluate expression
-evaluate (Nullary (Constant value))             = value
-evaluate (Nullary (Integ value))                = fromInteger value
+evaluate (Nullary (Variable str)) = error "Cannot evaluate a variable"
+evaluate ex@(Nullary x)                        = value ex
 evaluate (Unary Absolute value)             = abs (evaluate value)
 evaluate (Unary Negate expression)          = negate (evaluate expression)
 evaluate (Binary Add leftExpr rightExpr)            = evaluate leftExpr + evaluate rightExpr
@@ -373,4 +375,3 @@ evaluate (Binary Multiply leftExpr rightExpr)        = evaluate leftExpr * evalu
 evaluate (Binary Divide leftExpr rightExpr)         = evaluate leftExpr / evaluate rightExpr
 evaluate (Binary Logarithm base expression)  = logBase (evaluate base) (evaluate expression)
 evaluate (Binary Power  base expo)            = (evaluate base) ** (evaluate expo)
-evaluate (Nullary (Variable str)) = error "Cannot evaluate a variable"

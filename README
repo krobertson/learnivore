@@ -55,15 +55,26 @@ x = 3.0
 
 future plans:
 -------------
+immediate todo:
+Port over existing expression transformations to Matching on equations
+add trigonometric functions
+
+next todo:
+add rationals
+generalize to enable arbitrary predicate restrictions on term types
+add complex numbers and their operations
+
+
+
+to finish algebra:
+add rationals, factoring polynomials and integers, trigonometric functions, factorial
+add i and other operations on complex numbers, systems of equations
+
 DRY the expression and equation transformations up
 
 write an algebraic expression generator, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
 
 set up QuickCheck for testing (using HUnit for now)
-
-to finish algebra:
-add rationals, factoring polynomials and integers, trigonometric functions, e, pi, factorial
-add i and other operations on complex numbers, systems of equations
 
 to continue on the engineering math track:
 derivatives, integrals, linear algebra 
