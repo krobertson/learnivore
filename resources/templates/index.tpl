@@ -1,6 +1,6 @@
 <html>
   <head>
-    <script type="text/javascript" src="/jquery.js">
+    <script type="text/javascript" src="/jquery.js" />
     <title>Learnivore</title>
     <link rel="stylesheet" type="text/css" href="screen.css"/>
   </head>
