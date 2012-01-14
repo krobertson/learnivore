@@ -11,8 +11,6 @@ printSolvedExpression,
 printExpression,
 singleVariable,
 constSolved,
-isOperation,
-isTerm,
 simplify
 ) where
   
@@ -23,23 +21,22 @@ import ReadAndWriteMathStructures
 import MathStructures 
 import AlgebraicStructures
 import Matching
-
-fromMaybe (Just x) = x
-fromMaybe Nothing = []
+import Maybe
 
 solve :: Expression -> Solution
-solve expression = Solution (case solutionPath of (Just (path, steps)) -> Just ((expression:(reverse path)), "Initial Expression":(reverse steps))
-                                                  Nothing -> Nothing)
+solve expression = Solution (case solutionPath of 
+                                  (Just (path, steps)) -> Just ((expression:(reverse path)), "Initial Expression":(reverse steps))
+                                  Nothing -> Nothing)
                      where solutionPath = if solved expression 
                                           then Just ([expression], ["Final Expression"]) 
                                           else foldl (\(Just (exprs, strs)) (str,expr) -> (Just (expr:exprs, str:strs)))
-													(Just ([],[]))
-													(fromMaybe $ aStar (expressionGraph . snd)
-                                                     	  (\x y -> 1) 
-                                                     	  (expressionSize . snd)
-                                                     	  (solved . snd) 
-                                                     	  ("Initial Expression", expression))
-													
+                                                     (Just ([],[]))
+                                                     (fromMaybe [] $ aStar (expressionGraph . snd)
+                                                        (\x y -> 1) 
+                                                        (expressionSize . snd)
+                                                        (solved . snd) 
+                                                        ("Initial Expression", expression))
+                          
   
 
 solveExpression :: String -> String
@@ -53,8 +50,8 @@ getExprSolution x = case (solve x) of
                          Solution (Nothing) -> "No Solution"
 
 simplify x = case (solve x) of
-             	Solution (Just sol) -> (last . fst $  sol)
-             	Solution (Nothing) -> x
+              Solution (Just sol) -> (last . fst $  sol)
+              Solution (Nothing) -> x
 
 printSolvedExpression :: String -> IO ()
 printSolvedExpression = putStrLn . solveExpression
@@ -79,8 +76,8 @@ expressionSize (Binary operator leftExpr rightExpr) = sum [1, expressionSize lef
 -- solution checkers
 solved :: Expression -> Bool
 solved (Unary Absolute x)
- 				| isVarExpr x = varSolved x
-				| otherwise = False
+        | isVarExpr x = varSolved x
+        | otherwise = False
 solved x = (constSolved x) || (varSolved x)
 
 varSolved :: Expression -> Bool
@@ -99,101 +96,100 @@ constSolved _ = False
 
 -- expressionTransformations
 expressionTransformations = axiomTransforms ++ [
-                             ("Applying A Known Operator to Basic Numbers", evalexpr),
+                             ("Applying A Known Operator to Basic Numbers", transform ev),
                              ("Swapping Commutative Order", commute), ("Swapping Associative Evaluation Order", associate)
                             ]
 
 transform :: (Expression -> Expression) -> (Expression -> [Expression])
 transform fn = propagate ((:[]) . fn)
 
-axioms = [  ("Negation", "-(-x)=x"), ("Subtraction equals Addition of a Negative", "x-y=x+(-y)"),
-            ("Factoring", "(a*x)+(b*x)=(a+b)*x"), ("Factoring", "x+x=2*x"), ("Factoring", "n*x+x=(n+1)*x"),
-            ("Factoring", "a*x+b*y+c*z=a*(x+y*(b/a)+z*(c/a)"), ("Adding Zero", "x+0=x"), ("Multiplying by Zero", "x*0=0"),
-            ("Dividing a Zero", "0/x=0"), ("Multiplying two Negatives", "-x*(-y)=x*y"), ("Cancellative Property of Division", "(x*y)/x=y"),
+axioms = [  ("Negation", "-(-x)=x"), 
+            ("Subtraction equals Addition of a Negative", "x-y=x+(-y)"),
+            ("Factoring", "(a*x)+(b*x)=(a+b)*x"), 
+            ("Factoring", "x+x=2*x"), 
+            ("Factoring", "n*x+x=(n+1)*x"),
+            ("Factoring", "a*x+b*y+c*z=a*(x+y*(b/a)+z*(c/a)"), 
+            ("Adding Zero", "x+0=x"), 
+            ("Multiplying by Zero", "x*0=0"),
+            ("Dividing a Zero", "0/x=0"), 
+            ("Multiplying two Negatives", "-x*(-y)=x*y"), 
+            ("Cancellative Property of Division", "(x*y)/x=y"),
             ("Division equals Multiplication by an inverse", "x/y=x*(1/y)"),
-            ("Multiplying by One", "x*1=x"), ("Distributive Law of Multiplication", "x*(y+z)=x*y+x*z"),
-            ("Exponentiatiation by Zero", "x^0=1"), ("Exponentiating Zero", "0^x=0"), ("Exponentiating One", "1^x=1"),
-            ("Negative Exponentiation", "x^(-y)=1/(x^y)"), ("Exponential Multiplication", "(x^n)*(x^m)=x^(n+m)"),
-            ("Exponentiation", "(x^y)*x=x^(y+1)"), ("Definition of squaring", "x*x=x^2"),
-            ("FOIL", "(a+b)*(c+d)=a*c+a*d+b*c+b*d"), ("Linearity of the Logarithm", "log<x>(y*z)=log<x>(y)+log<x>(z)"),
-            ("Inverse Law of Logarithms", "log<x>(x^y)=y"), ("Inverse Law of Powers", "x^(log<x>(y))=y"),
+            ("Multiplying by One", "x*1=x"), 
+            ("Distributive Law of Multiplication", "x*(y+z)=x*y+x*z"),
+            ("Exponentiatiation by Zero", "x^0=1"), 
+            ("Exponentiating Zero", "0^x=0"), 
+            ("Exponentiating One", "1^x=1"),
+            ("Negative Exponentiation", "x^(-y)=1/(x^y)"), 
+            ("Exponential Multiplication", "(x^n)*(x^m)=x^(n+m)"),
+            ("Exponentiation", "(x^y)*x=x^(y+1)"), 
+            ("Definition of squaring", "x*x=x^2"),
+            ("FOIL", "(a+b)*(c+d)=a*c+a*d+b*c+b*d"), 
+            ("Linearity of the Logarithm", "log<x>(y*z)=log<x>(y)+log<x>(z)"),
+            ("Inverse Law of Logarithms", "log<x>(x^y)=y"), 
+            ("Inverse Law of Powers", "x^(log<x>(y))=y"),
             ("Completing the Square", "(x^2)+b*x+c=(x+b/2)^2+c-((b/2)^2)")
-          ]
+          ] ++
+          [ 
+            ("Pythagorean Trig Identity", "sin(u)^2+cos(u)^2=1"),
+            ("Pythagorean Trig Identity", "sec(u)^2-tan(u)^2=1"),
+            ("Pythagorean Trig Identity", "csc(u)^2-cot(u)^2 = 1"),
+            ("Trig Quotient Identity", "sin(u)/cos(u)=tan(u)"),
+            ("Trig Quotient Identity", "cos(u)/sin(u)=cot(u)"),
+            ("Trig Co-Function Identity", "sin(pi/2 - u)=cos(u)"),
+            ("Trig Co-Function Identity", "cos(pi/2 - u)=sin(u)"),
+            ("Trig Co-Function Identity", "tan(pi/2 - u)=cot(u)"),
+            ("Trig Co-Function Identity", "csc(pi/2 - u)=sec(u)"),
+            ("Trig Co-Function Identity", "sec(pi/2 - u)=csc(u)"),
+            ("Trig Co-Function Identity", "cot(pi/2 - u)=tan(u)"),
+            ("Trig Even-Odd Identity", "sin(-u)=-sin(u)"),
+            ("Trig Even-Odd Identity", "cos(-u)=-cos(u)"),
+            ("Trig Even-Odd Identity", "tan(-u)=-tan(u)"),
+            ("Trig Even-Odd Identity", "sec(-u)=-sec(u)"),
+            ("Trig Even-Odd Identity", "csc(-u)=-csc(u)"),
+            ("Trig Even-Odd Identity", "cot(-u)=-cot(u)"),
+            ("Trig Sum-Difference Formula", "sin(u+v)=sin(u)*cos(v)+cos(u)*sin(v)"),
+            ("Trig Sum-Difference Formula", "cos(u+v)=cos(u)*cos(v)+sin(u)*sin(v)"),
+            ("Trig Sum-Difference Formula", "tan(u+v)=(tan(u)*tan(v))/(1-tan(u)*tan(v))"),
+            ("Trig Double-Angle Formula", "sin(2*u)=2*sin(u)*cos(u)"),
+            ("Trig Double-Angle Formula", "cos(2*u)=cos(u)^2-sin(u)^2"),
+            ("Trig Double-Angle Formula", "tan(2*u)=(2*tan(u)) / (1-tan(u)^2)"),
+            ("Trig Half-Angle Formula", "sin(u)^2=(1-cos(2*u)) / 2"),
+            ("Trig Half-Angle Formula", "cos(u)^2=(1+cos(2*u)) / 2"),
+            ("Trig Half-Angle Formula", "tan(u)^2=(1-cos(2*u)) / (1+cos(2*u))"),
+            ("Trig Sum-To-Product Formula", "sin(u)+sin(v)=2*sin((u+v)/2)*cos((u-v)/2)"),
+            ("Trig Sum-To-Product Formula", "sin(u)-sin(v)=2*cos((u+v)/2)*sin((u-v)/2)"),
+            ("Trig Sum-To-Product Formula", "cos(u)+cos(v)=2*cos((u+v)/2)*cos((u-v)/2)"),
+            ("Trig Sum-To-Product Formula", "cos(u)-cos(v)=-2*sin((u+v)/2)*sin((u-v)/2)"),
+            ("Trig Product-To-Sum Formula", "sin(u)*sin(v)=(1/2)*(cos(u-v)-cos(u+v))"),
+            ("Trig Product-To-Sum Formula", "cos(u)*cos(v)=(1/2)*(cos(u-v)+cos(u+v))"),
+            ("Trig Product-To-Sum Formula", "sin(u)*cos(v)=(1/2)*(sin(u+v)+sin(u-v))"),
+            ("Trig Product-To-Sum Formula", "cos(u)*sin(v)=(1/2)*(sin(u+v)-sin(u-v))")
+          ] 
 
 axiomTransforms = List.map (\(str, eqn) -> (str, propagate (transEq eqn))) axioms
 
-evalexpr = transform ev
-
 -- helpers
-
-eitherOr :: (Expression -> Bool) -> Expression -> Expression -> Bool
-eitherOr fn x y = fn x || fn y
 
 isNum :: Term -> Bool
 isNum (Integ _) = True
 isNum (Constant _) = True
 isNum x = False
 
-isZero :: Term -> Bool
-isZero (Integ 0) = True
-isZero (Constant 0.0) = True
-isZero _ = False
-
-isOne :: Term -> Bool
-isOne (Integ 1) = True
-isOne (Constant 1.0) = True
-isOne _ = False
-
-isOperation :: BinaryOp -> Expression -> Bool
-isOperation op1 (Binary op2 _ _) = op1 == op2
-isOperation _ _ = False
-
 isVariable :: Term -> Bool
 isVariable (Variable _) = True
 isVariable _ = False
-
-isTerm :: Expression -> Bool
-isTerm (Nullary _) = True
-isTerm (Unary Negate (Nullary _)) = True
-isTerm _ = False
 
 exprIs :: (Term -> Bool) -> Expression -> Bool
 exprIs fn (Nullary x) = fn x
 exprIs _ _ = False
 
-isNumExpr (Unary Negate x) = (exprIs isNum x)
-isNumExpr x = (exprIs isNum x)  
-
-isZeroExpr :: Expression -> Bool
-isZeroExpr = exprIs isZero
-
-isOneExpr :: Expression -> Bool
-isOneExpr = exprIs isOne
-
 isVarExpr :: Expression -> Bool
 isVarExpr = exprIs isVariable
-
-isVariableProduct :: Expression -> Bool
-isVariableProduct (Binary Multiply (Nullary x) (Nullary y))
-                  | isVariable x && isNum y = True
-                  | isVariable y && isNum x = True
-isVariableProduct _ = False
-
-getConstant :: Expression -> Expression
-getConstant (Binary Multiply (Nullary x) (Nullary y))
- | isVariable x && isNum y = (Nullary y)
- | isVariable y && isNum x = (Nullary x)
- | otherwise = val 0
-getConstant (Nullary (Variable x)) = val 1
-getConstant _ = val 0
 
 singleVariable :: Expression -> Bool
 singleVariable (Nullary (Variable _)) = True
 singleVariable _ = False
-
-variable :: Expression -> String
-variable (Nullary (Variable str)) = str
-variable _ = ""
 
 -- useful for quickchecking that solutions found through search equal solutions found through straight evaluation
 

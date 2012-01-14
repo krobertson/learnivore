@@ -15,12 +15,16 @@ ab,
 lg,
 nroot,
 sqr,
+sn,
+cs,
+tn,
+tsec,
+tcsc,
+tcot,
 nthRoot,
 bopConstructor,
 exmap,
 topLevelExprs,
-numberOfVariables,
-listOfVariables,
 treeify,
 Term(..),
 UnaryOp(..),
@@ -46,6 +50,12 @@ data Term = Variable String
           
 data UnaryOp = Negate 
              | Absolute
+             | Sin
+             | Cos
+             | Tan
+             | Sec
+             | Csc
+             | Cot
                deriving (Eq, Ord)
             
 data BinaryOp = Logarithm 
@@ -66,6 +76,12 @@ class BinaryOperator a where
 instance UnaryOperator UnaryOp where
   unOp Negate = negate
   unOp Absolute = abs
+  unOp Sin = sin
+  unOp Cos = cos
+  unOp Tan = tan
+  unOp Sec = (1 /) . sin
+  unOp Csc = (1 /) . cos
+  unOp Cot = (1 /) . tan
   
 instance BinaryOperator BinaryOp where
   binOp Logarithm = logBase
@@ -159,6 +175,12 @@ sqr = Binary NthRoot (val 2)
 nroot = flip (Binary NthRoot)
 lg = (Binary Logarithm)
 var = Nullary . Variable
+sn = Unary Sin
+cs = Unary Cos
+tn = Unary Tan
+tsec = Unary Sec
+tcsc = Unary Csc
+tcot = Unary Cot
 
 bopConstructor Add = (|+|)
 bopConstructor Subtract = (|-|)
@@ -191,14 +213,5 @@ namedApply fn x = (fst fn, snd fn $ x)
 exmap :: (String, (Expression -> [Expression])) -> Expression -> [(String, Expression)]
 exmap fn expression = map (\x -> (fst result, x)) $ snd result
                         where result = (fn `namedApply` expression)
-                        
-numberOfVariables :: Expression -> Int
-numberOfVariables expression = length . listOfVariables $ expression
-
-listOfVariables :: Expression -> [String]
-listOfVariables (Nullary (Variable str)) = [str]
-listOfVariables (Unary op x) = listOfVariables x
-listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
-listOfVariables _ = []
 
 nthRoot x n = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)

@@ -1,0 +1,45 @@
+trigonometry:
+  "Pythagorean Identities":
+    - ex: "sin(x)^2+cos(x)^2 = 1"
+    - ex: "sec(x)^2-1 = tan(x)^2"
+    - ex: "csc(x)^2-1 = cot(x)^2"
+  "Quotient Identities":
+    - ex: "sin(u)/cos(u) = tan(u)"
+    - ex: "cos(u)/sin(u) = cot(u)"
+  "Co-Function Identities":
+    - ex: "sin(pi/2 - u) = cos(u)"
+    - ex: "cos(pi/2 - u) = sin(u)"
+    - ex: "tan(pi/2 - u) = cot(u)"
+    - ex: "csc(pi/2 - u) = sec(u)"
+    - ex: "sec(pi/2 - u) = csc(u)"
+    - ex: "cot(pi/2 - u) = tan(u)" 
+  "Even-Odd Identities":
+    - ex: "sin(-u) = -sin(u)"
+    - ex: "cos(-u) = -cos(u)"
+    - ex: "tan(-u) = -tan(u)"
+    - ex: "sec(-u) = -sec(u)"
+    - ex: "csc(-u) = -csc(u)"
+    - ex: "cot(-u) = -cot(u)"
+  "Sum-Difference Formulas":
+    - ex: "sin(u+v) = sin(u)*cos(v)+cos(u)*sin(v)"
+    - ex: "cos(u+v) = cos(u)*cos(v)+sin(u)*sin(v)"
+    - ex: "tan(u+v) = (tan(u)*tan(v))/(1-tan(u)*tan(v))"
+  "Double-Angle Formulas":
+    - ex: "sin(2*u) = 2*sin(u)*cos(u)"
+    - ex: "cos(2*u) = cos(u)^2-sin(u)^2"
+    - ex: "sin(2*u) = 2*sin(u)*cos(u)"
+    - ex: "tan(2*u) = (2*tan(u)) / (1-tan(u)^2)"
+  "Half-Angle Formulas":
+    - ex: "sin(u)^2 = (1-cos(2*u)) / 2"
+    - ex: "cos(u)^2 = (1+cos(2*u)) / 2"
+    - ex: "tan(u)^2 = (1-cos(2*u)) / (1+cos(2*u))"
+  "Sum-To-Product Formulas":
+    - ex: "sin(u)+sin(v) = 2*sin((u+v)/2)*cos((u-v)/2)"
+    - ex: "sin(u)-sin(v) = 2*cos((u+v)/2)*sin((u-v)/2)"
+    - ex: "cos(u)+cos(v) = 2*cos((u+v)/2)*cos((u-v)/2)"
+    - ex: "cos(u)-cos(v) = -2*sin((u+v)/2)*sin((u-v)/2)"
+  "Product-To-Sum Formulas":
+    - ex: "sin(u)*sin(v) = (1/2)*(cos(u-v)-cos(u+v))"
+    - ex: "cos(u)*cos(v) = (1/2)*(cos(u-v)+cos(u+v))"
+    - ex: "sin(u)*cos(v) = (1/2)*(sin(u+v)+sin(u-v))"
+    - ex: "cos(u)*sin(v) = (1/2)*(sin(u+v)-sin(u-v))"

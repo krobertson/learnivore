@@ -150,6 +150,12 @@ showUnary :: UnaryOp -> Expression -> String
 showUnary Negate (Nullary x) = "-" ++ (show x)
 showUnary Negate x = "-" ++ parenthesize (show x)
 showUnary Absolute x = around (show x) "|" "|"
+showUnary Sin x = "sin" ++ around (show x) "(" ")"
+showUnary Cos x = "cos" ++ around (show x) "(" ")"
+showUnary Tan x = "tan" ++ around (show x) "(" ")"
+showUnary Sec x = "sec" ++ around (show x) "(" ")"
+showUnary Csc x = "csc" ++ around (show x) "(" ")"
+showUnary Cot x = "cot" ++ around (show x) "(" ")"
 
 showBinary :: BinaryOp -> Expression -> Expression -> String
 showBinary Logarithm b x = "log" ++ angleBracket (show b) ++ parenthesize (show x)
@@ -198,13 +204,19 @@ termRecognizer = do many mySpace
                     return x
 
 term = parenParser
-       <|> logParser
-       <|> squareRootParser
-       <|> alternateSquareRootParser
-       <|> alternateRootParser
-       <|> nthRootParser
+       <|> try logParser
+       <|> try squareRootParser
+       <|> try alternateSquareRootParser
+       <|> try alternateRootParser
+       <|> try nthRootParser
        <|> absParser
        <|> negParser
+       <|> try sinParser
+       <|> try cosParser
+       <|> try tanParser
+       <|> try secParser
+       <|> try cscParser
+       <|> try cotParser
        <|> termParser
 
 
@@ -244,19 +256,50 @@ negParser = do string "-"
 
 absParser = do x <- within '|' '|'
                return (ab x)
+               
+sinParser = do string "sin"
+               x <- within '(' ')'
+               return (sn x)
 
+cosParser = do string "cos"
+               x <- within '(' ')'
+               return (cs x)
+
+tanParser = do string "tan"
+               x <- within '(' ')'
+               return (tn x)
+               
+secParser = do string "sec"
+               x <- within '(' ')'
+               return (tsec x)
+
+cscParser = do string "csc"
+               x <- within '(' ')'
+               return (tcsc x)
+
+cotParser = do string "cot"
+               x <- within '(' ')'
+               return (tcot x)
 parenParser = do x <- within '(' ')'
                  return x
+                 
+eParser = do string "e"
+             return $ Nullary E
 
-termParser = try floatParser <|> try varExprParser <|> intParser <|> varParser
+piParser = do string "pi"
+              return $ Nullary Pi
+
+termParser = try multExprParser <|> try floatParser <|> intParser <|> stringParser
+stringParser = try piParser <|> try eParser <|> try varParser
 
 floatParser = liftM val m_float
 
 intParser = liftM (val . fromInteger) m_natural
 
-varExprParser = do x <- (try floatParser) <|> intParser
-                   v <- varParser
-                   return (x |*| v)
+multExprParser = do x <- (try floatParser) <|> intParser
+                    v <- try stringParser
+                    return (x |*| v)
+                    
 varParser = liftM var m_identifier
 
 def = emptyDef{ identStart = letter
@@ -264,7 +307,7 @@ def = emptyDef{ identStart = letter
               , opStart = oneOf "|*-+=:^/"
               , opLetter = oneOf "|*-+=:^/"
               , reservedOpNames = ["*", "+", "-", "^", "/", "=", ":="]
-              , reservedNames = ["log"]
+              , reservedNames = ["log", "sin", "tan", "cos", "sec", "csc", "cot"]
               }
 
 TokenParser{ parens = m_parens

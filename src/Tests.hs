@@ -14,7 +14,7 @@ import System.IO.Unsafe
 main = testAll
 testAll = runTestTT $  allTests
 allTests = TestLabel "Learnivore Tests" (TestList [mathStructureTests, expressionTests, equationTests, mathTests, algebraicStructureTests])
-mathTests = importTests ["prealgebra.yml"]
+mathTests = importTests ["prealgebra.yml", "trigonometry.yml"]
                        
 
 importTests files = TestLabel "Mathematics Tests" (TestList (map decodeTestSet files))
