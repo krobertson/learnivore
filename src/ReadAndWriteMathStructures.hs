@@ -150,7 +150,6 @@ showUnary :: UnaryOp -> Expression -> String
 showUnary Negate (Nullary x) = "-" ++ (show x)
 showUnary Negate x = "-" ++ parenthesize (show x)
 showUnary Absolute x = around (show x) "|" "|"
-showUnary Parens x = parenthesize $ show x
 
 showBinary :: BinaryOp -> Expression -> Expression -> String
 showBinary Logarithm b x = "log" ++ angleBracket (show b) ++ parenthesize (show x)
@@ -205,6 +204,7 @@ term = parenParser
        <|> alternateRootParser
        <|> nthRootParser
        <|> absParser
+       <|> negParser
        <|> termParser
 
 
@@ -237,12 +237,16 @@ squareRootParser = do string "√"
 alternateSquareRootParser = do string "sqrt"
                                expr <- within '(' ')'
                                return (sqr expr)
+                               
+negParser = do string "-"
+               expr <- termParser
+               return (Unary Negate expr)
 
 absParser = do x <- within '|' '|'
                return (ab x)
 
 parenParser = do x <- within '(' ')'
-                 return (par x)
+                 return x
 
 termParser = try floatParser <|> try varExprParser <|> intParser <|> varParser
 

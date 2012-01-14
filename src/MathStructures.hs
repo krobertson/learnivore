@@ -6,17 +6,21 @@ module MathStructures
 (|/|),
 (|^|),
 (|=|),
+value,
+ev,
 val,
 var,
 neg,
-par,
 ab,
 lg,
 nroot,
 sqr,
+nthRoot,
 bopConstructor,
 exmap,
 topLevelExprs,
+numberOfVariables,
+listOfVariables,
 treeify,
 Term(..),
 UnaryOp(..),
@@ -29,6 +33,7 @@ SolvedEquation(..),
 
 import Data.List
 import Control.Monad(liftM)
+import Maybe
 
 -- Data structure
 
@@ -40,8 +45,7 @@ data Term = Variable String
             deriving (Ord)
           
 data UnaryOp = Negate 
-             | Absolute 
-             | Parens 
+             | Absolute
                deriving (Eq, Ord)
             
 data BinaryOp = Logarithm 
@@ -52,6 +56,52 @@ data BinaryOp = Logarithm
               | Subtract
               | NthRoot
                 deriving (Eq, Ord)
+                
+class UnaryOperator a where
+  unOp :: a -> (Double -> Double)
+  
+class BinaryOperator a where
+  binOp :: a -> (Double -> Double -> Double)
+  
+instance UnaryOperator UnaryOp where
+  unOp Negate = negate
+  unOp Absolute = abs
+  
+instance BinaryOperator BinaryOp where
+  binOp Logarithm = logBase
+  binOp Power = (**)
+  binOp Multiply = (*)
+  binOp Divide = (/)
+  binOp Add = (+)
+  binOp Subtract = (-)
+  binOp NthRoot = flip nthRoot
+  
+class Evaluable a where
+  ev ::  a -> a
+
+class Valuable a where
+  value :: a -> Maybe Double
+  
+instance Valuable Term where
+  value Pi = Just pi
+  value E = Just $ exp 1
+  value (Integ x) = Just (fromInteger x)
+  value (Constant x) = Just x
+  value x = Nothing
+  
+instance Valuable Expression where
+  value (Nullary term) = value term
+  value x = Nothing
+  
+instance Evaluable Expression where
+  ev ex@(Nullary x) = ex
+  ev ex@(Unary op (Nullary x)) = fromMaybe ex (do v <- value x
+                                                  Just (val . unOp op $ v))
+  ev ex@(Unary _ _) = ex
+  ev ex@(Binary op (Nullary x) (Nullary y)) = fromMaybe ex (do v1 <- value x
+                                                               v2 <- value y
+                                                               Just (val $ (binOp op) v1 v2))
+  ev ex = ex
             
 data SeqOp = SigmaSum | PiProduct deriving (Eq, Ord)
 
@@ -104,7 +154,6 @@ val x
 		| otherwise = Nullary (Constant x)
 		
 neg = Unary Negate
-par = Unary Parens
 ab = Unary Absolute
 sqr = Binary NthRoot (val 2)
 nroot = flip (Binary NthRoot)
@@ -142,3 +191,14 @@ namedApply fn x = (fst fn, snd fn $ x)
 exmap :: (String, (Expression -> [Expression])) -> Expression -> [(String, Expression)]
 exmap fn expression = map (\x -> (fst result, x)) $ snd result
                         where result = (fn `namedApply` expression)
+                        
+numberOfVariables :: Expression -> Int
+numberOfVariables expression = length . listOfVariables $ expression
+
+listOfVariables :: Expression -> [String]
+listOfVariables (Nullary (Variable str)) = [str]
+listOfVariables (Unary op x) = listOfVariables x
+listOfVariables (Binary op x y) = nub . concatMap listOfVariables $ [x,y]
+listOfVariables _ = []
+
+nthRoot x n = fst $ until (uncurry(==)) (\(_,x0) -> (x0,((n-1)*x0+x/x0**(n-1))/n)) (x,x/n)

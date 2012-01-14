@@ -1,5 +1,6 @@
 module Matching
 (
+transEq,
 trans,
 bind,
 match
@@ -7,11 +8,15 @@ match
 import Maybe
 import Data.List
 import MathStructures
+import ReadAndWriteMathStructures
 
 type Bindings = [(String, Expression)]
 
+transEq :: String -> (Expression -> [Expression])
+transEq eq = trans (parseEquation eq)
+
 trans :: Equation -> Expression -> [Expression]
-trans (Equation lhs rhs) expr = [expr] ++ (if bindingsL == [] then [] else [(bind bindingsL lhs)]) ++ (if bindingsR == [] then [] else [(bind bindingsL rhs)])
+trans (Equation lhs rhs) expr = [expr] ++ (if bindingsL == [] then [] else [(bind bindingsL rhs)]) ++ (if bindingsR == [] || not ((sort $ listOfVariables lhs) == (sort $ listOfVariables rhs)) then [] else [(bind bindingsR lhs)])
                                   where bindingsL = fromMaybe [] $ match lhs expr
                                         bindingsR = fromMaybe [] $ match rhs expr
 
@@ -35,14 +40,16 @@ match expr1 expr2
       
        
 match' :: Expression -> Expression -> Maybe Bindings
-match' expr1 expr2 = if (not (allTerms expr1)) then Nothing else (case (expr1, expr2) of
-                                                                    (Nullary (Variable x), y) -> Just [(x, y)]
-                                                                    ((Nullary x), y) -> if (Nullary x) == y then Just [] else Nothing
-                                                                    ((Unary op1 ex1), (Unary op2 ex2)) -> if op1 == op2 then match ex1 ex2 else Nothing
-                                                                    ((Binary op1 ex1 ex2), (Binary op2 ex3 ex4)) -> if op1 == op2 then (do
-                                                                                                                              bindings <- match ex1 ex3;
-                                                                                                                              bindings2 <- match ex2 ex4;
-                                                                                                                              Just (bindings ++ bindings2)) else Nothing)
+match' expr1 expr2 = if (not (allTerms expr1)) then Nothing else (match'' (expr1,expr2))
+                                                                                                                              
+match'' (Nullary (Variable x), y) = Just [(x, y)]
+match'' ((Nullary x), y)          = if (Nullary x) == y then Just [] else Nothing
+match'' ((Unary op1 ex1), (Unary op2 ex2)) = if op1 == op2 then match ex1 ex2 else Nothing
+match'' ((Unary _ _), x) = Nothing
+match'' ((Binary op1 ex1 ex2), (Binary op2 ex3 ex4)) = if op1 == op2 then (do bindings <- match ex1 ex3;
+                                                                              bindings2 <- match ex2 ex4;
+                                                                              Just (nub $ bindings ++ bindings2)) else Nothing 
+match'' ((Binary _ _ _), x) = Nothing
       
 
 noDupBinding :: Bindings -> Bool
