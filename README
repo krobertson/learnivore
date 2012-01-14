@@ -55,20 +55,19 @@ x = 3.0
 
 future plans:
 -------------
-immediate todo:
-Port over existing expression transformations to Matching on equations
-add trigonometric functions
-
-next todo:
+todo:
+add extensive trig tests
 add rationals
-generalize to enable arbitrary predicate restrictions on term types
 add complex numbers and their operations
+add basic derivatives and integrals
 
 
 
-to finish algebra:
-add rationals, factoring polynomials and integers, trigonometric functions, factorial
-add i and other operations on complex numbers, systems of equations
+to be ready for release:
+add rationals, factoring polynomials and integers, factorial, degrees vs radians
+add i and other operations on complex numbers, basic derivatives and integrals,
+add systems of equations
+add basic vectors/matrices
 
 
 write an algebraic expression generator, reusing the transformations, and adding a few generative (non-equivalent) transformations ([Seed] -> [Generator] -> (Expression, [Generator]))
