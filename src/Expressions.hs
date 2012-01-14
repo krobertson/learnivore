@@ -106,16 +106,17 @@ expressionTransformations = axiomTransforms ++ [
 transform :: (Expression -> Expression) -> (Expression -> [Expression])
 transform fn = propagate ((:[]) . fn)
 
-axioms = [
-            ("Negation", "-(-x)=x"), ("Factoring", "(a*x)+(b*x)=(a+b)*x"),
-            ("Factoring", "x+x=2*x"), ("Factoring", "n*x+x=(n+1)*x"),
-            ("Adding Zero", "x+0=x"), ("Multiplying by Zero", "x*0=0"),
-            ("Dividing a Zero", "0/x=0"), ("Multiplying two Negatives", "-x*(-y)=x*y"),
+axioms = [  ("Negation", "-(-x)=x"), ("Subtraction equals Addition of a Negative", "x-y=x+(-y)"),
+            ("Factoring", "(a*x)+(b*x)=(a+b)*x"), ("Factoring", "x+x=2*x"), ("Factoring", "n*x+x=(n+1)*x"),
+            ("Factoring", "a*x+b*y+c*z=a*(x+y*(b/a)+z*(c/a)"), ("Adding Zero", "x+0=x"), ("Multiplying by Zero", "x*0=0"),
+            ("Dividing a Zero", "0/x=0"), ("Multiplying two Negatives", "-x*(-y)=x*y"), ("Cancellative Property of Division", "(x*y)/x=y"),
+            ("Division equals Multiplication by an inverse", "x/y=x*(1/y)"),
             ("Multiplying by One", "x*1=x"), ("Distributive Law of Multiplication", "x*(y+z)=x*y+x*z"),
             ("Exponentiatiation by Zero", "x^0=1"), ("Exponentiating Zero", "0^x=0"), ("Exponentiating One", "1^x=1"),
             ("Negative Exponenatiation", "x^(-y)=1/(x^y)"), ("Exponential Multiplication", "(x^n)*(x^m)=x^(n+m)"), 
             ("Linearity of the Logarithm", "log<x>(y*z)=log<x>(y)+log<x>(z)"),
-            ("Inverse Law of Logarithms", "log<x>(x^y)=y"), ("Inverse Law of Powers", "x^(log<x>(y))=y")
+            ("Inverse Law of Logarithms", "log<x>(x^y)=y"), ("Inverse Law of Powers", "x^(log<x>(y))=y"),
+            ("Completing the Square", "(x^2)+b*x+c=(x+b/2)^2+c-((b/2)^2)")
           ]
 
 axiomTransforms = List.map (\(str, eqn) -> (str, propagate (transEq eqn))) axioms

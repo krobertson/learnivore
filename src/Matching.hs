@@ -16,7 +16,7 @@ transEq :: String -> (Expression -> [Expression])
 transEq eq = trans (parseEquation eq)
 
 trans :: Equation -> Expression -> [Expression]
-trans (Equation lhs rhs) expr = [expr] ++ (if bindingsL == [] then [] else [(bind bindingsL rhs)]) ++ (if bindingsR == [] || not ((sort $ listOfVariables lhs) == (sort $ listOfVariables rhs)) then [] else [(bind bindingsR lhs)])
+trans (Equation lhs rhs) expr = [expr] ++ (if bindingsL == [] then [] else [(bind bindingsL rhs)]) 
                                   where bindingsL = fromMaybe [] $ match lhs expr
                                         bindingsR = fromMaybe [] $ match rhs expr
 

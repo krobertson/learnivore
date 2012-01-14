@@ -13,7 +13,7 @@ testMathStructures = runTestTT $ mathStructureTests
 
 equalityTests = TestLabel "Equality Tests" (TestList [termEqualityTests, expressionEqualityTests])
 termEqualityTests = TestLabel "Term Equality Tests" (TestList [tVarEquality, tNumEquality])
-expressionEqualityTests = TestLabel "Expression Equality Tests" (TestList [tNullaryEq, tUnaryEq, tBinaryEqNonComm, tBinaryEqComm])
+expressionEqualityTests = TestLabel "Expression Equality Tests" (TestList [tNullaryEq, tUnaryEq, tBinaryEqNonComm])
 
 mathStructureTests = TestList ([equalityTests, baseCaseTests,arithmeticCases, testTopLevelExprsAdd, testRendering])
 
@@ -139,8 +139,3 @@ tBinaryEqNonComm = TestCase $ assertEqual
                 "should be able to determine the equality of two binary non commutative equations"
                 (parseEquation "2-4=-2") $
                 parseEquation "2-4=-2"
-                
-tBinaryEqComm = TestCase $ assertEqual
-                "should be able to determine the equality of two binary commutative equations"
-                (parseEquation "2*4=8") $
-                parseEquation "4*2=8"

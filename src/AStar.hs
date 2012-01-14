@@ -26,7 +26,8 @@ data AStar a c = AStar { visited  :: !(Set a),
                          score    :: !(Map a c),
                          memoHeur :: !(Map a c),
                          cameFrom :: !(Map a a),
-                         end      :: !(Maybe a) }
+                         end      :: !(Maybe a),
+                         mostSimple :: a }
     deriving Show
     
 aStarInit start = AStar { visited  = Set.empty,
@@ -34,7 +35,8 @@ aStarInit start = AStar { visited  = Set.empty,
                           score    = Map.singleton ("", snd start) 0,
                           memoHeur = Map.empty,
                           cameFrom = Map.empty,
-                          end      = Nothing }
+                          end      = Nothing,
+                          mostSimple = start }
 
 runAStar :: (Show a, Ord a, Show c, Ord c, Num c) =>
          ((String, a) -> Set (String, a))     -- adjacencies in graph
@@ -53,7 +55,8 @@ runAStar graph dist heur goal start = aStar' (aStarInit start)
                   then struct { end = Just (str, x) }
                   else aStar' $ foldl' (expand (str, x))
                                        (struct { waiting = w',
-                                            visited = Set.insert ("", x) (visited struct)})
+                                                 visited = Set.insert ("", x) (visited struct),
+                                                 mostSimple = if (heur . mostSimple $ struct) > (heur (str, x)) then (str, x) else (mostSimple struct)})
                                        (removeDups (Set.toList $ graph (str, x)) (Set.toList $ visited struct))
         expand current struct next
           = let val = ((score struct) ! ("", (snd current))) + dist current next
@@ -85,10 +88,10 @@ aStar :: (Show a, Show c, Ord a, Ord c, Num c) =>
 aStar graph dist heur goal start
     = let s = runAStar graph dist heur goal start
       in case end s of
-            Nothing -> Nothing
+            Nothing -> Just $ [mostSimple s]
             Just e  -> Just (reverse . takeWhile (not . (\x -> snd x == snd start)) . iterate ((cameFrom s) !) $ e)
 
-runAStarM :: (Monad m, Ord a, Ord c, Num c) =>
+runAStarM :: (Ord (m c), Monad m, Ord a, Ord c, Num c) =>
           ((String, a) -> m (Set (String, a)))   -- adjacencies in graph
           -> ((String, a) -> (String, a) -> m c) -- distance function
           -> ((String, a) -> m c)      -- heuristic distance to goal
@@ -106,7 +109,8 @@ runAStarM graph dist heur goal start = aStar' (aStarInit start)
                         else do ns <- graph x
                                 u <- foldM (expand x)
                                            (s { waiting = w',
-                                                visited = Set.insert x (visited s)})
+                                                visited = Set.insert x (visited s),
+                                                mostSimple = if (heur . mostSimple $ s) > (heur x) then x else (mostSimple s)})
                                            (Set.toList (ns \\ visited s))
                                 aStar' u
         expand x s y
@@ -125,7 +129,7 @@ runAStarM graph dist heur goal start = aStar' (aStarInit start)
 
 -- | This function computes an optimal (minimal distance) path through a graph in a best-first fashion,
 -- starting from a given starting point.
-aStarM :: (Monad m, Ord a, Ord c, Num c) =>
+aStarM :: (Ord (m c), Monad m, Ord a, Ord c, Num c) =>
          ((String, a) -> m (Set (String, a)))   -- ^ The graph we are searching through, given as a function from vertices
                             -- to their neighbours.
          -> ((String, a) -> (String, a) -> m c) -- ^ Distance function between neighbouring vertices of the graph. This will
@@ -140,7 +144,7 @@ aStarM graph dist heur goal start
     = do sv <- start
          s <- runAStarM graph dist heur goal sv
          return $ case end s of
-                    Nothing -> Nothing
+                    Nothing -> Just $ [mostSimple s]
                     Just e  -> Just (reverse . takeWhile (not . (== sv)) . iterate (cameFrom s !) $ e)
 
 

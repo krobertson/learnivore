@@ -124,4 +124,4 @@ tSolveThroughEqs2 = TestCase $ assertEqual
 tSolveThroughEqs3 = TestCase $ assertEqual 
           "should find a solution through a given path"
           "x = 2\n=> Final Equation\nx = 2" $
-          solveThroughEquations ["2+x+1+1=6", "4+x=6", "x=6-3", "x=2"] "x+1+1+1+1=6"
+          solveThroughEquations ["2+x+1+1=6", "3+x=5", "x=2"] "x+1+1+1+1=6"
